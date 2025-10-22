@@ -1,0 +1,71 @@
+[
+    {
+        "title": "LLM Chat Interface",
+        "properties": [
+            {
+                "name": "label",
+                "label": "Menu Label",
+                "type": "textfield",
+                "required": "True",
+                "value": "LLM Chat"
+            },
+            {
+                "name": "id",
+                "label": "ID",
+                "type": "textfield",
+                "required": "True",
+                "regex_validation": "^[a-zA-Z0-9_]+$",
+                "validation_message": "Only alphanumeric characters and underscore allowed"
+            },
+            {
+                "name": "apiEndpoint",
+                "label": "LLM API Endpoint",
+                "type": "textfield",
+                "required": "True",
+                "value": "https://api.openai.com/v1/chat/completions"
+            },
+            {
+                "name": "apiKey",
+                "label": "API Key",
+                "type": "password",
+                "required": "True"
+            },
+            {
+                "name": "model",
+                "label": "LLM Model",
+                "type": "textfield",
+                "required": "True",
+                "value": "gpt-4"
+            },
+            {
+                "name": "temperature",
+                "label": "Temperature",
+                "type": "textfield",
+                "value": "0.7"
+            },
+            {
+                "name": "maxTokens",
+                "label": "Max Tokens",
+                "type": "textfield",
+                "value": "1000"
+            },
+            {
+                "name": "systemPrompt",
+                "label": "System Prompt",
+                "type": "textarea",
+                "value": "You are a helpful assistant."
+            },
+            {
+                "name": "customCss",
+                "label": "Custom CSS",
+                "type": "textarea"
+            },
+            {
+                "name": "customPage",
+                "label": "Custom Page Template",
+                "type": "textfield",
+                "description": "Path to custom JSP template (leave blank to use default)"
+            }
+        ]
+    }
+]

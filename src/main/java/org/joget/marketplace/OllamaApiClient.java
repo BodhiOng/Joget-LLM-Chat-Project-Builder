@@ -28,13 +28,12 @@ public class OllamaApiClient {
      * @param model        Model name to use (e.g., "llama2")
      * @param systemPrompt System prompt to set context
      * @param temperature  Temperature parameter (0.0 to 1.0)
-     * @param maxTokens    Maximum tokens to generate
      * @return The response from the LLM
      * @throws IOException   If there's an error communicating with the API
      * @throws JSONException If there's an error parsing the JSON response
      */
     public static String callOllamaApi(String message, String apiEndpoint,
-            String model, String systemPrompt, double temperature, int maxTokens)
+            String model, String systemPrompt, double temperature)
             throws IOException, JSONException {
 
         if (apiEndpoint == null || apiEndpoint.trim().isEmpty()) {
@@ -63,11 +62,6 @@ public class OllamaApiClient {
 
         // Add temperature
         requestBody.put("temperature", temperature);
-
-        // Add max tokens if specified
-        if (maxTokens > 0) {
-            requestBody.put("num_predict", maxTokens);
-        }
 
         // Set stream to false to get the complete response at once
         requestBody.put("stream", false);
@@ -163,13 +157,12 @@ public class OllamaApiClient {
      * @param model        Model name to use (e.g., "llama2")
      * @param systemPrompt System prompt to set context
      * @param temperature  Temperature parameter (0.0 to 1.0)
-     * @param maxTokens    Maximum tokens to generate
      * @param callback     Callback function to handle streaming responses
      * @throws IOException   If there's an error communicating with the API
      * @throws JSONException If there's an error parsing the JSON response
      */
     public static void callOllamaApiStreaming(String message, String apiEndpoint,
-            String model, String systemPrompt, double temperature, int maxTokens,
+            String model, String systemPrompt, double temperature,
             StreamingResponseCallback callback)
             throws IOException, JSONException {
 
@@ -199,11 +192,6 @@ public class OllamaApiClient {
 
         // Add temperature
         requestBody.put("temperature", temperature);
-
-        // Add max tokens if specified
-        if (maxTokens > 0) {
-            requestBody.put("num_predict", maxTokens);
-        }
 
         // Set stream to true to get streaming responses
         requestBody.put("stream", true);

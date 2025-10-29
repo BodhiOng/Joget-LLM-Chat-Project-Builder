@@ -22,26 +22,20 @@
                 "label": "Ollama API Endpoint",
                 "type": "textfield",
                 "required": "True",
-                "value": "http://localhost:11434/api/generate"
+                "value": "http://localhost:11434/api/chat"
             },
             {
                 "name": "model",
                 "label": "Ollama Model",
                 "type": "textfield",
                 "required": "True",
-                "value": "llama2"
+                "value": "gpt-oss:120b-cloud"
             },
             {
                 "name": "temperature",
                 "label": "Temperature",
                 "type": "textfield",
                 "value": "0.7"
-            },
-            {
-                "name": "maxTokens",
-                "label": "Max Tokens",
-                "type": "textfield",
-                "value": "1000"
             },
             {
                 "name": "systemPrompt",
@@ -57,17 +51,6 @@
                     "value": "true",
                     "label": "Enable streaming responses"
                 }]
-            },
-            {
-                "name": "customCss",
-                "label": "Custom CSS",
-                "type": "textarea"
-            },
-            {
-                "name": "customPage",
-                "label": "Custom Page Template",
-                "type": "textfield",
-                "description": "Path to custom JSP template (leave blank to use default)"
             }
         ]
     }

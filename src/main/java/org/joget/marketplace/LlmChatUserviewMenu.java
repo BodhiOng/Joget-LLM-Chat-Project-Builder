@@ -334,9 +334,8 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
                 String model = getPropertyString("model");
                 String systemPrompt = getPropertyString("systemPrompt");
                 
-                // Get temperature and maxTokens with default values
+                // Get temperature with default value
                 double temperature = 0.7;
-                int maxTokens = 1000;
                 
                 try {
                     String tempStr = getPropertyString("temperature");
@@ -345,15 +344,6 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
                     }
                 } catch (NumberFormatException e) {
                     LogUtil.warn(getClassName(), "Invalid temperature value, using default 0.7");
-                }
-                
-                try {
-                    String tokensStr = getPropertyString("maxTokens");
-                    if (tokensStr != null && !tokensStr.isEmpty()) {
-                        maxTokens = Integer.parseInt(tokensStr);
-                    }
-                } catch (NumberFormatException e) {
-                    LogUtil.warn(getClassName(), "Invalid maxTokens value, using default 1000");
                 }
                 
                 // Call Ollama API
@@ -366,8 +356,7 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
                             apiEndpoint, 
                             model, 
                             systemPrompt, 
-                            temperature, 
-                            maxTokens
+                            temperature
                         );
                         
                         // Log the response for debugging
@@ -427,8 +416,7 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
                             apiEndpoint, 
                             model, 
                             systemPrompt, 
-                            temperature, 
-                            maxTokens,
+                            temperature,
                             callback
                         );
                     } catch (Exception e) {

@@ -1,11 +1,14 @@
 package org.joget.marketplace;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.service.AppUtil;
 import org.joget.apps.userview.model.UserviewBuilderPalette;
@@ -15,8 +18,34 @@ import org.joget.commons.util.StringUtil;
 import org.joget.plugin.base.PluginWebSupport;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.joget.marketplace.OllamaApiClient;
 
 public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSupport {
+    
+    /**
+     * Utility method to send a JSON response
+     * 
+     * @param response The HttpServletResponse object
+     * @param key The key for the JSON object
+     * @param value The value for the JSON object
+     * @throws IOException If there's an error writing to the response
+     */
+    private void sendJsonResponse(HttpServletResponse response, String key, String value) throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+        
+        try {
+            JSONObject jsonResponse = new JSONObject();
+            jsonResponse.put(key, value);
+            response.getWriter().write(jsonResponse.toString());
+        } catch (JSONException e) {
+            // Fallback if JSON creation fails
+            response.getWriter().write("{\"" + key + "\":\"" + 
+                StringUtil.escapeString(value, StringUtil.TYPE_JSON, null) + "\"}");
+        }
+    }
 
     @Override
     public String getVersion() {
@@ -119,23 +148,59 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
         html.append("        \n");
         html.append("        // Send message to server\n");
         html.append("        $.ajax({\n");
-        html.append("            url: '" + getUrl() + "&action=sendMessage',\n");
+        // Use the correct web service URL with explicit plugin class name
+        html.append("            url: '/jw/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service',\n");
         html.append("            type: 'POST',\n");
         html.append("            data: {\n");
-        html.append("                message: message\n");
+        html.append("                action: 'sendMessage',\n");
+        html.append("                message: message,\n");
+        html.append("                appId: '${appId}',\n");
+        html.append("                appVersion: '${appVersion}'\n");
         html.append("            },\n");
-        html.append("            dataType: 'json',\n");
+        html.append("            dataType: 'text',\n");
         html.append("            success: function(data) {\n");
         html.append("                // Add bot response to chat\n");
-        html.append("                addMessage(data.response, false);\n");
+        html.append("                console.log('Raw success response:', data);\n");
+        html.append("                try {\n");
+        html.append("                    // Try to parse as JSON\n");
+        html.append("                    const jsonData = JSON.parse(data);\n");
+        html.append("                    addMessage(jsonData.response, false);\n");
+        html.append("                } catch (e) {\n");
+        html.append("                    console.error('Error parsing response:', e);\n");
+        html.append("                    // Just use the raw data\n");
+        html.append("                    addMessage(data, false);\n");
+        html.append("                }\n");
         html.append("            },\n");
         html.append("            error: function(xhr, status, error) {\n");
         html.append("                // Show error message\n");
         html.append("                let errorText = 'Error communicating with the LLM API';\n");
         html.append("                try {\n");
-        html.append("                    const response = JSON.parse(xhr.responseText);\n");
-        html.append("                    if (response.error) {\n");
-        html.append("                        errorText = response.error;\n");
+        html.append("                    console.log('Raw error response:', xhr.responseText);\n");
+        html.append("                    console.log('Status code:', xhr.status);\n");
+        html.append("                    console.log('Error:', error);\n");
+        html.append("                    \n");
+        html.append("                    const debugDiv = $('<div>').css({\n");
+        html.append("                        'background-color': '#ffeeee',\n");
+        html.append("                        'border': '1px solid #ff0000',\n");
+        html.append("                        'padding': '10px',\n");
+        html.append("                        'margin-top': '10px',\n");
+        html.append("                        'white-space': 'pre-wrap',\n");
+        html.append("                        'font-family': 'monospace',\n");
+        html.append("                        'font-size': '12px'\n");
+        html.append("                    });\n");
+        html.append("                    debugDiv.text('Raw Response:\\n' + xhr.responseText);\n");
+        html.append("                    errorMessage.after(debugDiv);\n");
+        html.append("                    \n");
+        html.append("                    try {\n");
+        html.append("                        const response = JSON.parse(xhr.responseText);\n");
+        html.append("                        if (response.error) {\n");
+        html.append("                            errorText = response.error;\n");
+        html.append("                        }\n");
+        html.append("                    } catch (e) {\n");
+        html.append("                        console.error('Error parsing error response:', e);\n");
+        html.append("                        if (xhr.responseText && xhr.responseText.length < 200) {\n");
+        html.append("                            errorText = xhr.responseText;\n");
+        html.append("                        }\n");
         html.append("                    }\n");
         html.append("                } catch (e) {\n");
         html.append("                    console.error('Error parsing error response:', e);\n");
@@ -195,7 +260,13 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
 
     @Override
     public String getDecoratedMenu() {
-        return "<a href=\"" + getUrl() + "\" class=\"menu-link\"><span class=\"menu-icon\"><i class=\"fas fa-comments\"></i></span><span class=\"menu-label\">" + getPropertyString("label") + "</span></a>";
+        // Ensure URL is properly formatted
+        String url = getUrl();
+        // Make sure there are no & characters in the URL that should be ? instead
+        if (url.contains("&") && !url.contains("?")) {
+            url = url.replace("&", "?");
+        }
+        return "<a href=\"" + url + "\" class=\"menu-link\"><span class=\"menu-icon\"><i class=\"fas fa-comments\"></i></span><span class=\"menu-label\">" + getPropertyString("label") + "</span></a>";
     }
 
     @Override
@@ -214,11 +285,51 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
     public void webService(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String action = request.getParameter("action");
         
-        if ("sendMessage".equals(action)) {
+        // Log the request parameters for debugging
+        LogUtil.info(getClassName(), "webService called with action: " + action);
+        LogUtil.info(getClassName(), "Request URL: " + request.getRequestURL() + (request.getQueryString() != null ? "?" + request.getQueryString() : ""));
+        LogUtil.info(getClassName(), "Content-Type: " + request.getContentType());
+        LogUtil.info(getClassName(), "Plugin Name: " + getClass().getName());
+        
+        // Log all request parameters
+        java.util.Enumeration<String> paramNames = request.getParameterNames();
+        while (paramNames.hasMoreElements()) {
+            String paramName = paramNames.nextElement();
+            String paramValue = request.getParameter(paramName);
+            LogUtil.info(getClassName(), "Parameter: " + paramName + " = " + paramValue);
+        }
+        
+        if ("checkConnection".equals(action)) {
+            // Check if Ollama is accessible
+            response.setContentType("application/json;charset=UTF-8");
+            String apiEndpoint = getPropertyString("apiEndpoint");
+            if (apiEndpoint == null || apiEndpoint.trim().isEmpty()) {
+                apiEndpoint = "http://localhost:11434/api/generate";
+            }
+            
+            try {
+                // Try to connect to the Ollama API
+                URL url = new URL(apiEndpoint.replace("/generate", "/tags"));
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(5000); // 5 seconds timeout
+                
+                int responseCode = connection.getResponseCode();
+                
+                // Always return a simple JSON response
+                response.getWriter().write("{\"status\":\"ok\"}");
+            } catch (Exception e) {
+                LogUtil.error(getClassName(), e, "Error checking Ollama connection: " + e.getMessage());
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                
+                // Always return a simple JSON error response
+                response.getWriter().write("{\"error\":\"Cannot connect to Ollama server\"}");
+            }
+        } else if ("sendMessage".equals(action) || "streamMessage".equals(action)) {
+            boolean isStreaming = "streamMessage".equals(action);
             try {
                 // Get message from request
                 String message = request.getParameter("message");
-                String apiKey = getPropertyString("apiKey");
                 String apiEndpoint = getPropertyString("apiEndpoint");
                 String model = getPropertyString("model");
                 String systemPrompt = getPropertyString("systemPrompt");
@@ -245,51 +356,105 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
                     LogUtil.warn(getClassName(), "Invalid maxTokens value, using default 1000");
                 }
                 
-                // Call LLM API
-                String result;
-                
-                // Check if the endpoint is OpenAI or another provider
-                if (apiEndpoint == null || apiEndpoint.isEmpty() || apiEndpoint.contains("openai.com")) {
-                    // Use OpenAI-specific implementation
-                    result = LlmApiClient.callOpenAiApi(message, apiKey, apiEndpoint, model, systemPrompt, temperature, maxTokens);
-                } else {
-                    // Use generic implementation for other providers
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("model", model);
-                    params.put("temperature", temperature);
-                    params.put("max_tokens", maxTokens);
-                    if (systemPrompt != null && !systemPrompt.isEmpty()) {
-                        params.put("system_prompt", systemPrompt);
-                    }
-                    
-                    result = LlmApiClient.callGenericLlmApi(message, apiKey, apiEndpoint, params, null);
-                    
-                    // Try to parse the response if it's JSON
+                // Call Ollama API
+                if (!isStreaming) {
+                    // Non-streaming mode
+                    String result;
                     try {
-                        JSONObject jsonResult = new JSONObject(result);
-                        if (jsonResult.has("response")) {
-                            result = jsonResult.getString("response");
-                        } else if (jsonResult.has("text")) {
-                            result = jsonResult.getString("text");
-                        } else if (jsonResult.has("content")) {
-                            result = jsonResult.getString("content");
-                        }
-                    } catch (JSONException e) {
-                        // Not JSON or couldn't parse, use the raw response
-                        LogUtil.debug(getClassName(), "Response is not JSON or couldn't be parsed: " + e.getMessage());
+                        result = OllamaApiClient.callOllamaApi(
+                            message, 
+                            apiEndpoint, 
+                            model, 
+                            systemPrompt, 
+                            temperature, 
+                            maxTokens
+                        );
+                        
+                        // Log the response for debugging
+                        LogUtil.info(getClassName(), "Sending response to client: " + result);
+                        
+                        // Return a proper JSON response
+                        response.setContentType("application/json;charset=UTF-8");
+                        JSONObject jsonResponse = new JSONObject();
+                        jsonResponse.put("response", result);
+                        response.getWriter().write(jsonResponse.toString());
+                    } catch (Exception e) {
+                        LogUtil.error(getClassName(), e, "Error calling Ollama API: " + e.getMessage());
+                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        
+                        // Send a proper JSON error response
+                        response.setContentType("application/json;charset=UTF-8");
+                        String errorMessage = e.getMessage() != null ? e.getMessage() : "Error connecting to Ollama API";
+                        JSONObject jsonError = new JSONObject();
+                        jsonError.put("error", errorMessage);
+                        response.getWriter().write(jsonError.toString());
+                    }
+                } else {
+                    // Streaming mode - use Server-Sent Events
+                    response.setContentType("text/event-stream");
+                    response.setCharacterEncoding("UTF-8");
+                    response.setHeader("Cache-Control", "no-cache");
+                    response.setHeader("Connection", "keep-alive");
+                    
+                    final PrintWriter writer = response.getWriter();
+                    
+                    try {
+                        // Create a callback for handling streaming responses
+                        OllamaApiClient.StreamingResponseCallback callback = new OllamaApiClient.StreamingResponseCallback() {
+                            @Override
+                            public void onResponseChunk(String chunk) {
+                                JSONObject jsonChunk = new JSONObject();
+                                jsonChunk.put("chunk", chunk);
+                                writer.write("data: " + jsonChunk.toString() + "\n\n");
+                                writer.flush();
+                            }
+                            
+                            @Override
+                            public void onComplete() {
+                                JSONObject jsonDone = new JSONObject();
+                                jsonDone.put("done", true);
+                                writer.write("data: " + jsonDone.toString() + "\n\n");
+                                writer.flush();
+                            }
+                        };
+                        
+                        // Set up server-sent events for streaming with a properly formatted URL
+                        String streamUrl = request.getContextPath() + "/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service?action=streamMessage&message=" + java.net.URLEncoder.encode(message, "UTF-8") + "&appId=" + request.getParameter("appId") + "&appVersion=" + request.getParameter("appVersion");
+                        
+                        // Call Ollama API with streaming
+                        OllamaApiClient.callOllamaApiStreaming(
+                            message, 
+                            apiEndpoint, 
+                            model, 
+                            systemPrompt, 
+                            temperature, 
+                            maxTokens,
+                            callback
+                        );
+                    } catch (Exception e) {
+                        LogUtil.error(getClassName(), e, "Error in streaming response from Ollama API");
+                        JSONObject jsonError = new JSONObject();
+                        jsonError.put("error", e.getMessage());
+                        writer.write("data: " + jsonError.toString() + "\n\n");
+                        writer.flush();
                     }
                 }
                 
-                // Return response
-                response.setContentType("application/json");
-                JSONObject jsonResponse = new JSONObject();
-                jsonResponse.put("response", result);
-                response.getWriter().write(jsonResponse.toString());
-                
             } catch (Exception e) {
-                LogUtil.error(getClassName(), e, "Error calling LLM API: " + e.getMessage());
+                LogUtil.error(getClassName(), e, "Error in webService: " + e.getMessage());
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                response.getWriter().write("{\"error\": \"" + StringUtil.escapeString(e.getMessage(), StringUtil.TYPE_JSON, null) + "\"}");
+                
+                // Use the utility method to ensure valid JSON
+                String errorMessage = e.getMessage();
+                if (errorMessage == null || errorMessage.trim().isEmpty()) {
+                    errorMessage = "Unknown error occurred";
+                }
+                
+                // Log the response we're sending for debugging
+                LogUtil.debug(getClassName(), "Sending error response: " + errorMessage);
+                
+                // Send the error response
+                sendJsonResponse(response, "error", errorMessage);
             }
         }
     }

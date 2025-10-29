@@ -128,11 +128,40 @@
             <button id="sendButton"><i class="fas fa-paper-plane"></i> Send</button>
         </div>
         
-        <div class="typing-indicator" id="typingIndicator">
-            AI is thinking...
+        <div id="typingIndicator" style="display: none; margin-left: 10px; font-style: italic; color: #666;">AI is thinking...</div>
+        <div id="errorMessage" style="color: red; margin-top: 10px; display: none;"></div>
+        <div id="debugInfo" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9;">
+            <h3>Debug Information</h3>
+            <p><strong>Service URL:</strong> <span id="serviceUrlDisplay"></span></p>
+            <p><strong>Plugin Name:</strong> org.joget.marketplace.LlmChatUserviewMenu</p>
+            <p><strong>App ID:</strong> ${appId}</p>
+            <p><strong>App Version:</strong> ${appVersion}</p>
+            <p><strong>Test Connection:</strong> <a href="javascript:void(0)" id="testConnectionLink">Click to Test Connection</a></p>
+            <p><strong>Test Response:</strong> <span id="testResponse"></span></p>
+            
+            <h4>Direct Form Test</h4>
+            <form id="directTestForm" action="/jw/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service" method="post" target="_blank">
+                <input type="hidden" name="action" value="checkConnection">
+                <input type="hidden" name="appId" value="${appId}">
+                <input type="hidden" name="appVersion" value="${appVersion}">
+                <button type="submit">Test in New Window</button>
+            </form>
+            
+            <h4>Direct URL Test</h4>
+            <p>Check Connection: <a href="/jw/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service?action=checkConnection&appId=${appId}&appVersion=${appVersion}" target="_blank">Test Connection</a></p>
+            
+            <h4>Send Message Test</h4>
+            <form id="sendMessageTestForm" action="/jw/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service" method="post" target="_blank">
+                <input type="hidden" name="action" value="sendMessage">
+                <input type="hidden" name="appId" value="${appId}">
+                <input type="hidden" name="appVersion" value="${appVersion}">
+                <input type="text" name="message" value="Hello" style="width: 200px;">
+                <button type="submit">Send Test Message</button>
+            </form>
+            
+            <h4>Plugin Class Name Check</h4>
+            <p>Full Class Name: <%= getClass().getName() %></p>
         </div>
-        
-        <div class="error-message" id="errorMessage"></div>
     </div>
     
     <script>
@@ -143,6 +172,88 @@
             const typingIndicator = $('#typingIndicator');
             const errorMessage = $('#errorMessage');
             
+            // Add a debug div
+            const debugContainer = $('<div>').attr('id', 'debugContainer').css({
+                'margin-top': '20px',
+                'padding': '10px',
+                'border': '1px solid #ccc',
+                'background-color': '#f9f9f9',
+                'display': 'none'
+            });
+            
+            const debugToggle = $('<button>').text('Toggle Debug Info').css({
+                'margin-top': '10px',
+                'padding': '5px 10px',
+                'background-color': '#ddd',
+                'border': '1px solid #aaa',
+                'border-radius': '3px',
+                'cursor': 'pointer'
+            }).click(function() {
+                debugContainer.toggle();
+            });
+            
+            $('body').append(debugToggle).append(debugContainer);
+            
+            // Function to log debug info
+            function logDebug(title, content) {
+                const entry = $('<div>').css({
+                    'margin-bottom': '10px',
+                    'padding': '5px',
+                    'border-bottom': '1px solid #ddd'
+                });
+                
+                entry.append($('<h4>').text(title).css('margin', '0 0 5px 0'));
+                
+                if (typeof content === 'object') {
+                    try {
+                        content = JSON.stringify(content, null, 2);
+                    } catch (e) {
+                        content = String(content);
+                    }
+                }
+                
+                entry.append($('<pre>').text(content).css({
+                    'margin': '0',
+                    'padding': '5px',
+                    'background-color': '#eee',
+                    'overflow-x': 'auto',
+                    'white-space': 'pre-wrap',
+                    'font-family': 'monospace',
+                    'font-size': '12px'
+                }));
+                
+                debugContainer.prepend(entry);
+            }
+            
+            // Get the correct service URL with explicit plugin class name and hardcoded context path
+            const serviceUrl = '/jw/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service';
+            logDebug('Service URL', serviceUrl);
+            
+            // Display the service URL in the debug info
+            $('#serviceUrlDisplay').text(serviceUrl);
+            
+            // Handle test connection link click
+            $('#testConnectionLink').click(function() {
+                $('#testResponse').text('Testing connection...');
+                
+                // Make a direct AJAX call to test the connection
+                $.ajax({
+                    url: serviceUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'checkConnection',
+                        appId: '${appId}',
+                        appVersion: '${appVersion}'
+                    },
+                    complete: function(xhr, status) {
+                        $('#testResponse').html('<pre style="margin: 0; padding: 5px; background-color: #eee; max-height: 200px; overflow: auto;">' + 
+                            'Status: ' + status + '<br>' +
+                            'Response Code: ' + xhr.status + '<br>' +
+                            'Response Text: ' + xhr.responseText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>');
+                    }
+                });
+            });
+            
             // Function to add a message to the chat
             function addMessage(message, isUser) {
                 const messageDiv = $('<div>').addClass('message').addClass(isUser ? 'user-message' : 'bot-message');
@@ -151,10 +262,43 @@
                 chatMessages.scrollTop(chatMessages[0].scrollHeight);
             }
             
+            // Function to check if Ollama is accessible
+            function checkOllamaConnection(callback) {
+                $.ajax({
+                    url: serviceUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'checkConnection',
+                        appId: '${appId}',
+                        appVersion: '${appVersion}'
+                    },
+                    dataType: 'text', // Explicitly use text to avoid JSON parsing
+                    timeout: 10000, // 10 second timeout
+                    success: function(data) {
+                        // Extremely simplified success handling
+                        logDebug('Connection Check Response', data);
+                        
+                        // If we got any response, consider it a success
+                        callback(true);
+                    },
+                    error: function(xhr, status, error) {
+                        logDebug('Connection Check Error Status', status);
+                        logDebug('Connection Check Error Message', error);
+                        logDebug('Connection Check Raw Response', xhr.responseText);
+                        
+                        errorMessage.text('Unable to connect to Ollama server. Please make sure it is running.').show();
+                        callback(false);
+                    }
+                });
+            }
+            
             // Function to send a message to the LLM API
             function sendMessage() {
                 const message = messageInput.val().trim();
                 if (!message) return;
+                
+                // Hide any previous error messages
+                errorMessage.hide();
                 
                 // Add user message to chat
                 addMessage(message, true);
@@ -167,38 +311,143 @@
                 typingIndicator.show();
                 errorMessage.hide();
                 
-                // Send message to server
-                $.ajax({
-                    url: '${pageContext.request.contextPath}/web/json/plugin/${param.pluginName}/service',
-                    type: 'POST',
-                    data: {
-                        action: 'sendMessage',
-                        message: message,
-                        appId: '${appId}',
-                        appVersion: '${appVersion}'
-                    },
-                    dataType: 'json',
-                    success: function(data) {
-                        // Add bot response to chat
-                        addMessage(data.response, false);
-                    },
-                    error: function(xhr, status, error) {
-                        // Show error message
-                        let errorText = 'Error communicating with the LLM API';
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            if (response.error) {
-                                errorText = response.error;
-                            }
-                        } catch (e) {
-                            console.error('Error parsing error response:', e);
-                        }
-                        errorMessage.text(errorText).show();
-                    },
-                    complete: function() {
-                        // Re-enable send button and hide typing indicator
+                // Create a message div for the response
+                const responseDiv = $('<div>').addClass('message').addClass('bot-message');
+                chatMessages.append(responseDiv);
+                
+                // Check if Ollama is accessible first
+                checkOllamaConnection(function(isConnected) {
+                    if (!isConnected) {
                         sendButton.prop('disabled', false);
                         typingIndicator.hide();
+                        responseDiv.text('Error: Cannot connect to Ollama server');
+                        return;
+                    }
+                    
+                    // Check if streaming is enabled
+                    const useStreaming = ${param.useStreaming || false};
+                    
+                    if (useStreaming) {
+                        // Set up server-sent events for streaming with a properly formatted URL
+                        const streamUrl = '/jw/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service' +
+                            '?action=streamMessage&message=' + encodeURIComponent(message) +
+                            '&appId=${appId}&appVersion=${appVersion}';
+                            
+                        console.log('Stream URL:', streamUrl);
+                        const eventSource = new EventSource(streamUrl);
+                        
+                        let fullResponse = '';
+                        
+                        // Handle incoming message chunks with simplified parsing
+                        eventSource.onmessage = function(event) {
+                            console.log('Stream event received:', event.data);
+                            
+                            try {
+                                // Try to parse as JSON
+                                const data = JSON.parse(event.data);
+                                
+                                // Handle chunk data
+                                if (data.chunk) {
+                                    fullResponse += data.chunk;
+                                    responseDiv.text(fullResponse);
+                                    chatMessages.scrollTop(chatMessages[0].scrollHeight);
+                                }
+                                
+                                // Check if this is the final message
+                                if (data.done) {
+                                    eventSource.close();
+                                    sendButton.prop('disabled', false);
+                                    typingIndicator.hide();
+                                }
+                            } catch (e) {
+                                // If parsing fails, just append the raw data
+                                console.error('Error parsing streaming response:', e);
+                                fullResponse += event.data;
+                                responseDiv.text(fullResponse);
+                                chatMessages.scrollTop(chatMessages[0].scrollHeight);
+                            }
+                        };
+                        
+                        // Handle errors
+                        eventSource.onerror = function() {
+                            eventSource.close();
+                            if (fullResponse === '') {
+                                responseDiv.text('Error: Failed to get response from Ollama');
+                            }
+                            errorMessage.text('Error connecting to Ollama streaming API').show();
+                            sendButton.prop('disabled', false);
+                            typingIndicator.hide();
+                        };
+                    } else {
+                        // Use regular AJAX for non-streaming responses with explicit text dataType
+                        $.ajax({
+                            url: serviceUrl,
+                            type: 'POST',
+                            data: {
+                                action: 'sendMessage',
+                                message: message,
+                                appId: '${appId}',
+                                appVersion: '${appVersion}'
+                            },
+                            dataType: 'text', // Explicitly use text to avoid JSON parsing
+                            success: function(data) {
+                                // Add bot response to chat with extremely simplified handling
+                                logDebug('Raw Success Response', data);
+                                
+                                // Try to extract the actual response from the text
+                                let responseText = data;
+                                
+                                try {
+                                    // Look for JSON-like content in the response
+                                    if (data.includes('"response"')) {
+                                        const match = data.match(/"response"\s*:\s*"([^"]*)"/i);
+                                        if (match && match[1]) {
+                                            responseText = match[1];
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Error extracting response:', e);
+                                    // Just use the raw data
+                                }
+                                
+                                // Display the response
+                                responseDiv.text(responseText);
+                                chatMessages.scrollTop(chatMessages[0].scrollHeight);
+                            },
+                            error: function(xhr, status, error) {
+                                // Show a simple error message without trying to parse JSON
+                                logDebug('Error Status', status);
+                                logDebug('Error Message', error);
+                                logDebug('Raw Error Response', xhr.responseText);
+                                logDebug('Response Headers', xhr.getAllResponseHeaders());
+                                
+                                // Also log the full XHR object
+                                logDebug('Full XHR Object', {
+                                    status: xhr.status,
+                                    statusText: xhr.statusText,
+                                    responseType: xhr.responseType,
+                                    responseURL: xhr.responseURL,
+                                    readyState: xhr.readyState
+                                });
+                                
+                                // Display a simple error message
+                                let errorText = 'Error communicating with the Ollama API';
+                                if (xhr.status) {
+                                    errorText += ' (Status: ' + xhr.status + ')';
+                                }
+                                
+                                // Display the error message
+                                errorMessage.text(errorText).show();
+                                
+                                // Show a simple error in the chat
+                                responseDiv.text('Error: Could not get response from Ollama. Please try again.');
+                            },
+                            complete: function() {
+                                // Re-enable send button and hide typing indicator
+                                sendButton.prop('disabled', false);
+                                typingIndicator.hide();
+                            }
+                        });
                     }
                 });
             }

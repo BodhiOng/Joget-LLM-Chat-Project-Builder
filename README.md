@@ -1,12 +1,12 @@
-# LLM Chat Project Builder for Joget
+# Ollama Chat Project Builder for Joget
 
-This plugin provides a custom UI page component for Joget that allows users to chat with an LLM (Large Language Model) via API. Instead of redirecting users to the LLM's service page, this component integrates the chat interface directly into Joget's UI.
+This plugin provides a custom UI page component for Joget that allows users to chat with Ollama, a local LLM (Large Language Model) service. Instead of redirecting users to external services, this component integrates the chat interface directly into Joget's UI and connects to your local Ollama instance.
 
 ## Features
 
 - Clean, modern chat interface integrated within Joget
-- Support for OpenAI API (GPT-3.5, GPT-4, etc.)
-- Extensible design to support other LLM providers
+- Support for Ollama API (Llama2, Mistral, etc.)
+- Streaming responses for a more interactive experience
 - Customizable system prompts
 - Adjustable parameters (temperature, max tokens)
 - Custom CSS support for UI customization
@@ -28,17 +28,27 @@ This plugin provides a custom UI page component for Joget that allows users to c
 ### Adding to a Userview
 
 1. In the Joget App Designer, open your app and navigate to a userview
-2. Add a new menu item and select "LLM Chat Interface" from the menu type dropdown
+2. Add a new menu item and select "Ollama Chat Interface" from the menu type dropdown
 3. Configure the following settings:
    - **Menu Label**: The label for the menu item
    - **ID**: A unique identifier for the menu
-   - **LLM API Endpoint**: The API endpoint for your LLM provider (default: OpenAI)
-   - **API Key**: Your API key for the LLM service
-   - **LLM Model**: The model to use (e.g., "gpt-4")
+   - **Ollama API Endpoint**: The API endpoint for your Ollama instance (default: http://localhost:11434/api/generate)
+   - **Ollama Model**: The model to use (e.g., "llama2", "mistral", etc.)
    - **Temperature**: Controls randomness (0.0 to 1.0)
    - **Max Tokens**: Maximum number of tokens to generate
    - **System Prompt**: Initial instructions for the LLM
+   - **Use Streaming**: Enable to get streaming responses for a more interactive experience
    - **Custom CSS**: Optional CSS to customize the appearance
+
+### Ollama Setup
+
+1. Install Ollama on your server or local machine from [ollama.ai](https://ollama.ai/)
+2. Pull your desired models using the Ollama CLI:
+   ```
+   ollama pull llama2
+   ollama pull mistral
+   ```
+3. Ensure Ollama is running and accessible from your Joget server (default port: 11434)
 
 ### Security Considerations
 
@@ -48,7 +58,7 @@ This plugin provides a custom UI page component for Joget that allows users to c
 
 ## Customization
 
-The plugin can be extended to support additional LLM providers by modifying the `LlmApiClient.java` file. The default implementation supports OpenAI's API format, but you can add support for other providers by implementing custom API call methods.
+The plugin is designed to work with Ollama, but can be extended to support additional LLM providers by creating new client classes similar to `OllamaApiClient.java`. The implementation supports both regular and streaming responses for an interactive chat experience.
 
 ## License
 

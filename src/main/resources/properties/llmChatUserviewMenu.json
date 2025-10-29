@@ -1,13 +1,13 @@
 [
     {
-        "title": "LLM Chat Interface",
+        "title": "Ollama Chat Interface",
         "properties": [
             {
                 "name": "label",
                 "label": "Menu Label",
                 "type": "textfield",
                 "required": "True",
-                "value": "LLM Chat"
+                "value": "Ollama Chat"
             },
             {
                 "name": "id",
@@ -19,23 +19,17 @@
             },
             {
                 "name": "apiEndpoint",
-                "label": "LLM API Endpoint",
+                "label": "Ollama API Endpoint",
                 "type": "textfield",
                 "required": "True",
-                "value": "https://api.openai.com/v1/chat/completions"
-            },
-            {
-                "name": "apiKey",
-                "label": "API Key",
-                "type": "password",
-                "required": "True"
+                "value": "http://localhost:11434/api/generate"
             },
             {
                 "name": "model",
-                "label": "LLM Model",
+                "label": "Ollama Model",
                 "type": "textfield",
                 "required": "True",
-                "value": "gpt-4"
+                "value": "llama2"
             },
             {
                 "name": "temperature",
@@ -54,6 +48,15 @@
                 "label": "System Prompt",
                 "type": "textarea",
                 "value": "You are a helpful assistant."
+            },
+            {
+                "name": "useStreaming",
+                "label": "Use Streaming",
+                "type": "checkbox",
+                "options": [{
+                    "value": "true",
+                    "label": "Enable streaming responses"
+                }]
             },
             {
                 "name": "customCss",

@@ -23,6 +23,8 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/js/fontawesome5/css/all.min.css">
     <script src="${pageContext.request.contextPath}/js/jquery/jquery-3.5.1.min.js"></script>
     <script src="${pageContext.request.contextPath}/js/jquery/jquery-migrate-3.0.1.min.js"></script>
+    <!-- Include marked.js for markdown formatting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
         .chat-container {
@@ -127,8 +129,51 @@
             display: none;
         }
         
-        /* Custom CSS */
-        <%= customCss %>
+        /* Markdown formatting styles */
+        .bot-message pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .bot-message code {
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .bot-message blockquote {
+            border-left: 4px solid #ddd;
+            padding-left: 10px;
+            margin-left: 0;
+            color: #666;
+        }
+        
+        .bot-message ul, .bot-message ol {
+            padding-left: 20px;
+        }
+        
+        .bot-message table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .bot-message th, .bot-message td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .bot-message th {
+            background-color: #f2f2f2;
+        }
     </style>
 </head>
 <body>
@@ -272,6 +317,30 @@
                 });
             });
             
+            // Function to format LLM responses with markdown and handle special characters
+            function formatLLMResponse(text) {
+                // First, temporarily replace <br> tags with a placeholder
+                let processedText = text.replace(/<br\s*\/?>/gi, '{{BR_PLACEHOLDER}}');
+                
+                // Escape any HTML to prevent XSS
+                processedText = processedText
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+                
+                // Restore <br> tags from placeholders
+                processedText = processedText.replace(/{{BR_PLACEHOLDER}}/g, '<br>');
+                
+                try {
+                    // Use marked.js to convert markdown to HTML
+                    const formattedText = marked.parse(processedText);
+                    return formattedText;
+                } catch (e) {
+                    console.error('Error formatting response:', e);
+                    return '<p>' + processedText + '</p>';
+                }
+            }
+            
             // Function to add a message to the chat
             function addMessage(message, isUser) {
                 const messageDiv = $('<div>').addClass('message').addClass(isUser ? 'user-message' : 'bot-message');
@@ -283,9 +352,14 @@
                         'margin-left': '10px',
                         'border': '1px solid #e0e0e0'
                     });
+                    
+                    // Format LLM responses with markdown
+                    messageDiv.html(formatLLMResponse(message));
+                } else {
+                    // User messages are displayed as plain text
+                    messageDiv.text(message);
                 }
                 
-                messageDiv.text(message);
                 chatMessages.append(messageDiv);
                 chatMessages.scrollTop(chatMessages[0].scrollHeight);
             }
@@ -385,8 +459,8 @@
                                 // Handle chunk data
                                 if (data.chunk) {
                                     fullResponse += data.chunk;
-                                    // Replace loading animation with text
-                                    responseDiv.empty().text(fullResponse);
+                                    // Replace loading animation with formatted text
+                                    responseDiv.empty().html(formatLLMResponse(fullResponse));
                                     chatMessages.scrollTop(chatMessages[0].scrollHeight);
                                 }
                                 

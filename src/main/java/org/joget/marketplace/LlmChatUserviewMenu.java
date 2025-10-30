@@ -76,7 +76,7 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
     public String getRenderPage() {
         // Implement direct HTML rendering as a fallback
         StringBuilder html = new StringBuilder();
-        html.append("<div class=\"llm-chat-container\" style=\"max-width: 800px; margin: 0 auto; padding: 20px;\">\n");
+        html.append("<div class=\"llm-chat-container\" style=\"max-width: 1400px; margin: 0 auto; padding: 20px;\">\n");
         html.append("    <h2><i class=\"fas fa-comments\"></i> LLM Chat</h2>\n");
         html.append("    <div id=\"chatMessages\" style=\"height: 500px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 15px; background-color: #f9f9f9;\">\n");
         html.append("        <div class=\"message bot-message\" style=\"margin-bottom: 15px; padding: 10px; border-radius: 5px; max-width: 80%; background-color: #ffffff; margin-right: auto; margin-left: 10px; border: 1px solid #e0e0e0;\">\n");

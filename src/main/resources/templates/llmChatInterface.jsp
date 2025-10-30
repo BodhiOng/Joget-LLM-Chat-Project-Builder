@@ -99,8 +99,26 @@
         .typing-indicator {
             display: none;
             margin-left: 10px;
-            font-style: italic;
-            color: #666;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+            width: 70px;
+            text-align: center;
+        }
+        
+        .loading-animation {
+            display: inline-block;
+            width: 50px;
+            height: 10px;
+            position: relative;
+            background: linear-gradient(to right, #ccc 30%, #eee 50%, #ccc 70%);
+            background-size: 500% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
         
         .error-message {
@@ -118,7 +136,7 @@
         <h2><i class="fas fa-comments"></i> LLM Chat</h2>
         
         <div class="chat-messages" id="chatMessages">
-            <div class="message bot-message">
+            <div class="message bot-message" style="background-color: #ffffff; margin-right: auto; margin-left: 10px; border: 1px solid #e0e0e0;">
                 Hello! How can I assist you today?
             </div>
         </div>
@@ -128,7 +146,7 @@
             <button id="sendButton"><i class="fas fa-paper-plane"></i> Send</button>
         </div>
         
-        <div id="typingIndicator" style="display: none; margin-left: 10px; font-style: italic; color: #666;">AI is thinking...</div>
+        <!-- Typing indicator moved to chat window in the sendMessage function -->
         <div id="errorMessage" style="color: red; margin-top: 10px; display: none;"></div>
         <div id="debugInfo" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9;">
             <h3>Debug Information</h3>
@@ -257,6 +275,16 @@
             // Function to add a message to the chat
             function addMessage(message, isUser) {
                 const messageDiv = $('<div>').addClass('message').addClass(isUser ? 'user-message' : 'bot-message');
+                
+                if (!isUser) {
+                    messageDiv.css({
+                        'background-color': '#ffffff',
+                        'margin-right': 'auto',
+                        'margin-left': '10px',
+                        'border': '1px solid #e0e0e0'
+                    });
+                }
+                
                 messageDiv.text(message);
                 chatMessages.append(messageDiv);
                 chatMessages.scrollTop(chatMessages[0].scrollHeight);
@@ -306,20 +334,28 @@
                 // Clear input
                 messageInput.val('');
                 
-                // Disable send button and show typing indicator
+                // Disable send button and hide error message
                 sendButton.prop('disabled', true);
-                typingIndicator.show();
                 errorMessage.hide();
                 
-                // Create a message div for the response
-                const responseDiv = $('<div>').addClass('message').addClass('bot-message');
+                // Create a message div for the response with loading animation
+                const responseDiv = $('<div>').addClass('message').addClass('bot-message').css({
+                    'background-color': '#ffffff',
+                    'margin-right': 'auto',
+                    'margin-left': '10px',
+                    'border': '1px solid #e0e0e0'
+                });
+                
+                // Add loading animation to the response div
+                const loadingAnimation = $('<div>').addClass('loading-animation');
+                responseDiv.append(loadingAnimation);
                 chatMessages.append(responseDiv);
+                chatMessages.scrollTop(chatMessages[0].scrollHeight);
                 
                 // Check if Ollama is accessible first
                 checkOllamaConnection(function(isConnected) {
                     if (!isConnected) {
                         sendButton.prop('disabled', false);
-                        typingIndicator.hide();
                         responseDiv.text('Error: Cannot connect to Ollama server');
                         return;
                     }
@@ -349,7 +385,8 @@
                                 // Handle chunk data
                                 if (data.chunk) {
                                     fullResponse += data.chunk;
-                                    responseDiv.text(fullResponse);
+                                    // Replace loading animation with text
+                                    responseDiv.empty().text(fullResponse);
                                     chatMessages.scrollTop(chatMessages[0].scrollHeight);
                                 }
                                 
@@ -357,7 +394,6 @@
                                 if (data.done) {
                                     eventSource.close();
                                     sendButton.prop('disabled', false);
-                                    typingIndicator.hide();
                                 }
                             } catch (e) {
                                 // If parsing fails, just append the raw data
@@ -376,7 +412,6 @@
                             }
                             errorMessage.text('Error connecting to Ollama streaming API').show();
                             sendButton.prop('disabled', false);
-                            typingIndicator.hide();
                         };
                     } else {
                         // Use regular AJAX for non-streaming responses with explicit text dataType
@@ -405,19 +440,12 @@
                                             responseText = match[1];
                                         }
                                     }
-                                } catch (e) {
-                                    console.error('Error extracting response:', e);
-                                    // Just use the raw data
                                 }
                                 
-                                // Display the response
-                                responseDiv.text(responseText);
-                                chatMessages.scrollTop(chatMessages[0].scrollHeight);
-                            },
-                            error: function(xhr, status, error) {
-                                // Show a simple error message without trying to parse JSON
-                                logDebug('Error Status', status);
-                                logDebug('Error Message', error);
+                                // Check if this is the final message
+                                if (data.done) {
+                                    eventSource.close();
+                                    sendButton.prop('disabled', false);
                                 logDebug('Raw Error Response', xhr.responseText);
                                 logDebug('Response Headers', xhr.getAllResponseHeaders());
                                 
@@ -443,9 +471,8 @@
                                 responseDiv.text('Error: Could not get response from Ollama. Please try again.');
                             },
                             complete: function() {
-                                // Re-enable send button and hide typing indicator
+                                // Re-enable send button
                                 sendButton.prop('disabled', false);
-                                typingIndicator.hide();
                             }
                         });
                     }

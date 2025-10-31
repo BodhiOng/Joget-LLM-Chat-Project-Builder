@@ -44,7 +44,7 @@ public class OllamaApiClient {
             model = "gpt-oss:120b-cloud";
         }
 
-        URL url = new URL(apiEndpoint); 
+        URL url = new URL(apiEndpoint);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type", "application/json");
@@ -55,10 +55,19 @@ public class OllamaApiClient {
         requestBody.put("model", model);
         requestBody.put("prompt", message);
 
-        // Add system prompt if provided
-        if (systemPrompt != null && !systemPrompt.trim().isEmpty()) {
-            requestBody.put("system", systemPrompt);
-        }
+        // Enhance system prompt to request project structure in JSON format for
+        // code-related prompts
+        String enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
+                "When answering ANY coding-related questions, you MUST include a project structure in JSON format. " +
+                "Always add a 'projectStructure' JSON object at the end of your response with this exact format:\n" +
+                "```json\n{\"projectStructure\": {\n  \"filename1\": \"path/to/file1\",\n  \"filename2\": \"path/to/file2\"\n}}\n```\n"
+                +
+                "The keys should be filenames and values should be full paths. " +
+                "Example: {\"projectStructure\": {\"HelloWorldElement.java\": \"src/main/java/com/example/joget/plugin/HelloWorldElement.java\"}}\n"
+                +
+                "This is REQUIRED for ALL code-related responses without exception.";
+
+        requestBody.put("system", enhancedSystemPrompt);
 
         // Add temperature
         requestBody.put("temperature", temperature);
@@ -66,9 +75,13 @@ public class OllamaApiClient {
         // Set stream to false to get the complete response at once
         requestBody.put("stream", false);
 
+        // Log the request payload
+        String requestPayload = requestBody.toString();
+        LogUtil.info(OllamaApiClient.class.getName(), "Non-streaming request payload: " + requestPayload);
+
         // Send the request
         try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestBody.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] input = requestPayload.getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
         }
 
@@ -187,7 +200,21 @@ public class OllamaApiClient {
 
         // Add system prompt if provided
         if (systemPrompt != null && !systemPrompt.trim().isEmpty()) {
-            requestBody.put("system", systemPrompt);
+            // Enhance system prompt to request project structure in JSON format for
+            // code-related prompts
+            String enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
+                    "When answering ANY coding-related questions, you MUST include a project structure in JSON format. "
+                    +
+                    "Always add a 'projectStructure' JSON object at the end of your response with this exact format:\n"
+                    +
+                    "```json\n{\"projectStructure\": {\n  \"filename1\": \"path/to/file1\",\n  \"filename2\": \"path/to/file2\"\n}}\n```\n"
+                    +
+                    "The keys should be filenames and values should be full paths. " +
+                    "Example: {\"projectStructure\": {\"HelloWorldElement.java\": \"src/main/java/com/example/joget/plugin/HelloWorldElement.java\"}}\n"
+                    +
+                    "This is REQUIRED for ALL code-related responses without exception.";
+
+            requestBody.put("system", enhancedSystemPrompt);
         }
 
         // Add temperature
@@ -196,9 +223,13 @@ public class OllamaApiClient {
         // Set stream to true to get streaming responses
         requestBody.put("stream", true);
 
+        // Log the request payload
+        String requestPayload = requestBody.toString();
+        LogUtil.info(OllamaApiClient.class.getName(), "Streaming request payload: " + requestPayload);
+
         // Send the request
         try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestBody.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] input = requestPayload.getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
         }
 

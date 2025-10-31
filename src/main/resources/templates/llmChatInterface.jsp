@@ -174,11 +174,68 @@
         .bot-message th {
             background-color: #f2f2f2;
         }
+        
+        /* Download button styles */
+        .action-buttons {
+            margin-bottom: 10px;
+            text-align: right;
+        }
+        
+        #downloadCodeButton {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        #downloadCodeButton:hover {
+            background-color: #0056b3;
+        }
+        
+        #downloadCodeButton:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        /* Code block styles with copy button */
+        .code-block-container {
+            position: relative;
+            margin: 10px 0;
+        }
+        
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 2px 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        
+        .copy-button:hover {
+            opacity: 1;
+            background-color: #e9ecef;
+        }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <h2><i class="fas fa-comments"></i> LLM Chat</h2>
+        <div class="action-buttons">
+            <button id="downloadCodeButton" title="Download all code snippets as a zip file">
+                <i class="fas fa-download"></i> Download Code
+            </button>
+            <button id="debugHtmlButton" title="Debug HTML structure" style="margin-left: 10px; background-color: #6c757d;">
+                <i class="fas fa-bug"></i> Debug HTML
+            </button>
+        </div>
         
         <div class="chat-messages" id="chatMessages">
             <div class="message bot-message" style="background-color: #ffffff; margin-right: auto; margin-left: 10px; border: 1px solid #e0e0e0;">
@@ -232,6 +289,7 @@
             const chatMessages = $('#chatMessages');
             const messageInput = $('#messageInput');
             const sendButton = $('#sendButton');
+            const downloadCodeButton = $('#downloadCodeButton');
             const typingIndicator = $('#typingIndicator');
             const errorMessage = $('#errorMessage');
             
@@ -561,6 +619,201 @@
                 if (event.keyCode === 13 && !event.shiftKey) {
                     event.preventDefault();
                     sendMessage();
+                }
+            });
+            
+            // Add copy buttons to code blocks
+            function addCopyButtonsToCodeBlocks() {
+                // Find all pre elements within bot messages
+                $('.bot-message pre').each(function() {
+                    // Only add button if it doesn't already have one
+                    if ($(this).parent('.code-block-container').length === 0) {
+                        // Wrap the pre element in a container div
+                        $(this).wrap('<div class="code-block-container"></div>');
+                        
+                        // Add a copy button
+                        const copyButton = $('<button class="copy-button"><i class="fas fa-copy"></i> Copy</button>');
+                        $(this).parent().append(copyButton);
+                        
+                        // Add click event to copy button
+                        copyButton.click(function() {
+                            // Get the text content of the pre element
+                            const codeText = $(this).siblings('pre').text();
+                            
+                            // Create a temporary textarea element to copy the text
+                            const textarea = $('<textarea>');
+                            textarea.val(codeText).css({
+                                position: 'absolute',
+                                left: '-9999px'
+                            }).appendTo('body');
+                            
+                            // Select and copy the text
+                            textarea.select();
+                            document.execCommand('copy');
+                            
+                            // Remove the textarea
+                            textarea.remove();
+                            
+                            // Change button text temporarily
+                            const originalText = $(this).html();
+                            $(this).html('<i class="fas fa-check"></i> Copied!');
+                            
+                            // Reset button text after a delay
+                            setTimeout(() => {
+                                $(this).html(originalText);
+                            }, 2000);
+                        });
+                    }
+                });
+            }
+            
+            // Add copy buttons to code blocks when the DOM is ready
+            addCopyButtonsToCodeBlocks();
+            
+            // Add copy buttons to code blocks when new messages are added
+            const originalAddMessage = addMessage;
+            addMessage = function(message, isUser) {
+                originalAddMessage(message, isUser);
+                if (!isUser) {
+                    // Add copy buttons to code blocks after a short delay to ensure the DOM is updated
+                    setTimeout(addCopyButtonsToCodeBlocks, 100);
+                }
+            };
+            
+            // Handle debug HTML button click
+            $('#debugHtmlButton').click(function() {
+                // Create a modal dialog to show the HTML structure
+                const modal = $('<div>').css({
+                    'position': 'fixed',
+                    'top': '0',
+                    'left': '0',
+                    'width': '100%',
+                    'height': '100%',
+                    'background-color': 'rgba(0,0,0,0.7)',
+                    'z-index': '1000',
+                    'display': 'flex',
+                    'justify-content': 'center',
+                    'align-items': 'center'
+                });
+                
+                const modalContent = $('<div>').css({
+                    'background-color': 'white',
+                    'padding': '20px',
+                    'border-radius': '5px',
+                    'width': '80%',
+                    'height': '80%',
+                    'overflow': 'auto'
+                });
+                
+                const closeButton = $('<button>').text('Close').css({
+                    'position': 'absolute',
+                    'top': '10px',
+                    'right': '10px',
+                    'padding': '5px 10px',
+                    'background-color': '#dc3545',
+                    'color': 'white',
+                    'border': 'none',
+                    'border-radius': '3px',
+                    'cursor': 'pointer'
+                }).click(function() {
+                    modal.remove();
+                });
+                
+                // Get the HTML content of the chat messages
+                const chatContent = chatMessages.html();
+                
+                // Create a pre element to display the HTML
+                const pre = $('<pre>').css({
+                    'white-space': 'pre-wrap',
+                    'word-wrap': 'break-word',
+                    'background-color': '#f8f9fa',
+                    'padding': '10px',
+                    'border-radius': '3px',
+                    'border': '1px solid #dee2e6',
+                    'font-family': 'monospace',
+                    'font-size': '12px',
+                    'line-height': '1.5',
+                    'max-height': 'calc(80vh - 100px)',
+                    'overflow': 'auto'
+                }).text(chatContent.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+                
+                // Add a heading
+                const heading = $('<h2>').text('HTML Structure of Chat Messages');
+                
+                // Add a description
+                const description = $('<p>').html('This is the raw HTML structure of the chat messages. Look for <code>&lt;pre&gt;</code> and <code>&lt;code&gt;</code> tags that contain code snippets.');
+                
+                // Add everything to the modal
+                modalContent.append(closeButton, heading, description, pre);
+                modal.append(modalContent);
+                
+                // Add the modal to the body
+                $('body').append(modal);
+            });
+            
+            // Handle download code button click
+            downloadCodeButton.click(function() {
+                // Disable the button during download
+                downloadCodeButton.prop('disabled', true);
+                downloadCodeButton.html('<i class="fas fa-spinner fa-spin"></i> Preparing...');
+                
+                try {
+                    // Get the chat content
+                    console.log('Collecting chat content for download...');
+                    const chatContent = chatMessages.html();
+                    console.log('Chat content length: ' + chatContent.length);
+                    console.log('Chat content sample: ' + chatContent.substring(0, 200) + '...');
+                    
+                    // Create a form to submit the download request
+                    const form = $('<form>');
+                    form.attr('method', 'post');
+                    form.attr('action', '/jw/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service');
+                    form.attr('target', '_blank');
+                    
+                    // Add the action parameter
+                    const actionInput = $('<input>');
+                    actionInput.attr('type', 'hidden');
+                    actionInput.attr('name', 'action');
+                    actionInput.attr('value', 'downloadCode');
+                    form.append(actionInput);
+                    
+                    // Add the chat content parameter
+                    const chatContentInput = $('<input>');
+                    chatContentInput.attr('type', 'hidden');
+                    chatContentInput.attr('name', 'chatContent');
+                    chatContentInput.attr('value', chatContent);
+                    form.append(chatContentInput);
+                    
+                    // Add the app ID and version parameters
+                    const appIdInput = $('<input>');
+                    appIdInput.attr('type', 'hidden');
+                    appIdInput.attr('name', 'appId');
+                    appIdInput.attr('value', '${appId}');
+                    form.append(appIdInput);
+                    
+                    const appVersionInput = $('<input>');
+                    appVersionInput.attr('type', 'hidden');
+                    appVersionInput.attr('name', 'appVersion');
+                    appVersionInput.attr('value', '${appVersion}');
+                    form.append(appVersionInput);
+                    
+                    // Append the form to the body and submit it
+                    $('body').append(form);
+                    form.submit();
+                    form.remove();
+                    
+                    // Re-enable the button after a delay
+                    setTimeout(function() {
+                        downloadCodeButton.prop('disabled', false);
+                        downloadCodeButton.html('<i class="fas fa-download"></i> Download Code');
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error downloading code:', error);
+                    alert('Error downloading code: ' + error.message);
+                    
+                    // Re-enable the button
+                    downloadCodeButton.prop('disabled', false);
+                    downloadCodeButton.html('<i class="fas fa-download"></i> Download Code');
                 }
             });
         });

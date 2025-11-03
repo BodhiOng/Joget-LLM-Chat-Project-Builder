@@ -55,16 +55,13 @@ public class OllamaApiClient {
         requestBody.put("model", model);
         requestBody.put("prompt", message);
 
-        // Enhance system prompt to request project structure in JSON format for
-        // code-related prompts
+        // Enhance system prompt to request project structure in JSON format for code-related prompts
         String enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
-                "When answering ANY coding-related questions, you MUST include a project structure in JSON format. " +
-                "Always add a 'projectStructure' JSON object at the end of your response with this exact format:\n" +
-                "```json\n{\"projectStructure\": {\n  \"filename1\": \"path/to/file1\",\n  \"filename2\": \"path/to/file2\"\n}}\n```\n"
-                +
-                "The keys should be filenames and values should be full paths. " +
-                "Example: {\"projectStructure\": {\"HelloWorldElement.java\": \"src/main/java/com/example/joget/plugin/HelloWorldElement.java\"}}\n"
-                +
+                "When answering ANY coding-related questions, you MUST include a hierarchical project structure in JSON format. " +
+                "Always add a directory structure at the end of your response with this exact format:\n" +
+                "```json\n{\n  \"hello-world-plugin\": {\n    \"pom.xml\": null,\n    \"src\": {\n      \"main\": {\n        \"java\": {\n          \"com\": {\n            \"example\": {\n              \"joget\": {\n                \"plugin\": {\n                  \"HelloWorldElement.java\": null\n                }\n              }\n            }\n          }\n        },\n        \"resources\": {\n          \"plugin.properties\": null\n        }\n      }\n    }\n  }\n}\n```\n" +
+                "This hierarchical structure should represent the complete project directory layout with all files. " +
+                "Files are represented as keys with null values, and directories are represented as nested objects. " +
                 "This is REQUIRED for ALL code-related responses without exception.";
 
         requestBody.put("system", enhancedSystemPrompt);
@@ -198,24 +195,16 @@ public class OllamaApiClient {
         requestBody.put("model", model);
         requestBody.put("prompt", message);
 
-        // Add system prompt if provided
-        if (systemPrompt != null && !systemPrompt.trim().isEmpty()) {
-            // Enhance system prompt to request project structure in JSON format for
-            // code-related prompts
-            String enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
-                    "When answering ANY coding-related questions, you MUST include a project structure in JSON format. "
-                    +
-                    "Always add a 'projectStructure' JSON object at the end of your response with this exact format:\n"
-                    +
-                    "```json\n{\"projectStructure\": {\n  \"filename1\": \"path/to/file1\",\n  \"filename2\": \"path/to/file2\"\n}}\n```\n"
-                    +
-                    "The keys should be filenames and values should be full paths. " +
-                    "Example: {\"projectStructure\": {\"HelloWorldElement.java\": \"src/main/java/com/example/joget/plugin/HelloWorldElement.java\"}}\n"
-                    +
-                    "This is REQUIRED for ALL code-related responses without exception.";
+        // Enhance system prompt to request project structure in JSON format for code-related prompts
+        String enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
+                "When answering ANY coding-related questions, you MUST include a hierarchical project structure in JSON format. " +
+                "Always add a directory structure at the end of your response with this exact format:\n" +
+                "```json\n{\n  \"hello-world-plugin\": {\n    \"pom.xml\": null,\n    \"src\": {\n      \"main\": {\n        \"java\": {\n          \"com\": {\n            \"example\": {\n              \"joget\": {\n                \"plugin\": {\n                  \"HelloWorldElement.java\": null\n                }\n              }\n            }\n          }\n        },\n        \"resources\": {\n          \"plugin.properties\": null\n        }\n      }\n    }\n  }\n}\n```\n" +
+                "This hierarchical structure should represent the complete project directory layout with all files. " +
+                "Files are represented as keys with null values, and directories are represented as nested objects. " +
+                "This is REQUIRED for ALL code-related responses without exception.";
 
-            requestBody.put("system", enhancedSystemPrompt);
-        }
+        requestBody.put("system", enhancedSystemPrompt);
 
         // Add temperature
         requestBody.put("temperature", temperature);

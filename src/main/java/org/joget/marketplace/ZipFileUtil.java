@@ -558,9 +558,15 @@ public class ZipFileUtil {
         
         LogUtil.info(ZipFileUtil.class.getName(), "Looking for JSON project structure in chat content");
         
+        // First try to extract hierarchical project structure
+        boolean foundHierarchical = extractHierarchicalProjectStructure(chatContent);
+        if (foundHierarchical) {
+            return true;
+        }
+        
+        // Fallback to flat project structure format
         // Look for JSON structure pattern with multiple variations
-        // Example 1: "projectStructure": { "src/main/java/com/example/MyClass.java": "MyClass.java" }
-        // Example 2: projectStructure = { HelloWorldElement.java: "src/main/java/com/example/joget/plugin/HelloWorldElement.java" }
+        // Example: {"projectStructure": {"pom.xml": "hello-world-plugin/pom.xml", "HelloWorldElement.java": "hello-world-plugin/src/main/java/com/example/joget/plugin/HelloWorldElement.java"}}
         Pattern jsonPattern1 = Pattern.compile("[\"']?projectStructure[\"']?\\s*[:=]\\s*(\\{[^}]+\\})");
         Pattern jsonPattern2 = Pattern.compile("\\{\\s*[\"']?projectStructure[\"']?\\s*:\\s*(\\{[^}]+\\})\\s*\\}");
         
@@ -586,7 +592,8 @@ public class ZipFileUtil {
             
             try {
                 // Try to extract key-value pairs with more robust pattern matching
-                Pattern keyValuePattern = Pattern.compile("[\"']?([^\"':,{}]+)[\"']?\\s*:\\s*[\"']?([^\"',{}]+)[\"']?");
+                // Format: "filename": "path/to/file"
+                Pattern keyValuePattern = Pattern.compile("[\"']([^\"':,{}]+)[\"']\\s*:\\s*[\"']([^\"',{}]+)[\"']");
                 Matcher keyValueMatcher = keyValuePattern.matcher(jsonStr);
                 
                 boolean foundAny = false;
@@ -594,20 +601,8 @@ public class ZipFileUtil {
                     String fileName = keyValueMatcher.group(1).trim();
                     String path = keyValueMatcher.group(2).trim();
                     
-                    // Check if we need to swap them (sometimes the format is reversed)
-                    if (path.contains("/") && !fileName.contains("/")) {
-                        knownProjectStructure.put(fileName, path);
-                    } else if (fileName.contains("/") && !path.contains("/")) {
-                        knownProjectStructure.put(path, fileName);
-                    } else {
-                        // If both or neither contain slashes, use heuristics
-                        if (fileName.contains(".") && !path.contains(".")) {
-                            knownProjectStructure.put(fileName, path);
-                        } else {
-                            knownProjectStructure.put(path, fileName);
-                        }
-                    }
-                    
+                    // In the example format, keys are filenames and values are paths
+                    knownProjectStructure.put(fileName, path);
                     LogUtil.info(ZipFileUtil.class.getName(), "Added to project structure: " + fileName + " -> " + path);
                     foundAny = true;
                 }
@@ -619,6 +614,216 @@ public class ZipFileUtil {
         }
         
         return false;
+    }
+    
+    /**
+     * Extract hierarchical project structure from JSON format in the chat content
+     * 
+     * @param chatContent The chat content that might contain hierarchical JSON project structure
+     * @return True if project structure was found and extracted, false otherwise
+     */
+    private static boolean extractHierarchicalProjectStructure(String chatContent) {
+        LogUtil.info(ZipFileUtil.class.getName(), "Looking for hierarchical JSON project structure");
+        
+        // Try multiple patterns to extract JSON structure
+        boolean found = false;
+        String jsonBlock = null;
+        
+        // Pattern 1: Code block with json format
+        Pattern codeBlockPattern = Pattern.compile("```(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*```");
+        Matcher codeBlockMatcher = codeBlockPattern.matcher(chatContent);
+        if (codeBlockMatcher.find()) {
+            jsonBlock = codeBlockMatcher.group(1).trim();
+            found = true;
+            LogUtil.info(ZipFileUtil.class.getName(), "Found hierarchical JSON structure in code block");
+        }
+        
+        // Pattern 2: Raw JSON object with a root project structure
+        if (!found) {
+            // Look for JSON with a single root key that contains nested objects
+            Pattern rawJsonPattern = Pattern.compile("\\{\\s*\"[^\"]+\"\\s*:\\s*\\{[\\s\\S]*?\\}\\s*\\}");
+            Matcher rawJsonMatcher = rawJsonPattern.matcher(chatContent);
+            if (rawJsonMatcher.find()) {
+                jsonBlock = rawJsonMatcher.group(0).trim();
+                found = true;
+                LogUtil.info(ZipFileUtil.class.getName(), "Found hierarchical JSON structure with root project key");
+            }
+        }
+        
+        // Pattern 3: Any JSON object with nested structure
+        if (!found) {
+            Pattern anyJsonPattern = Pattern.compile("\\{[\\s\\S]*?\\{[\\s\\S]*?null[\\s\\S]*?\\}[\\s\\S]*?\\}");
+            Matcher anyJsonMatcher = anyJsonPattern.matcher(chatContent);
+            if (anyJsonMatcher.find()) {
+                jsonBlock = anyJsonMatcher.group(0).trim();
+                found = true;
+                LogUtil.info(ZipFileUtil.class.getName(), "Found hierarchical JSON structure with nested objects");
+            }
+        }
+        
+        if (found && jsonBlock != null) {
+            LogUtil.info(ZipFileUtil.class.getName(), "Processing hierarchical JSON structure: " + 
+                         (jsonBlock.length() > 100 ? jsonBlock.substring(0, 100) + "..." : jsonBlock));
+            
+            try {
+                // Clear existing structure before processing
+                knownProjectStructure.clear();
+                
+                // Process the hierarchical structure recursively
+                processHierarchicalStructure("", jsonBlock);
+                
+                if (!knownProjectStructure.isEmpty()) {
+                    LogUtil.info(ZipFileUtil.class.getName(), "Successfully extracted " + knownProjectStructure.size() + " file paths from hierarchical structure");
+                    return true;
+                }
+            } catch (Exception e) {
+                LogUtil.error(ZipFileUtil.class.getName(), e, "Error parsing hierarchical JSON structure");
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Process hierarchical JSON structure recursively
+     * 
+     * @param currentPath The current path in the hierarchy
+     * @param jsonStr The JSON string to process
+     */
+    private static void processHierarchicalStructure(String currentPath, String jsonStr) {
+        LogUtil.info(ZipFileUtil.class.getName(), "Processing hierarchical structure at path: " + currentPath + ", JSON length: " + jsonStr.length());
+        
+        try {
+            // More robust JSON parsing for nested structures
+            int depth = 0;
+            StringBuilder currentKey = new StringBuilder();
+            boolean inQuotes = false;
+            boolean keyComplete = false;
+            StringBuilder nestedJson = new StringBuilder();
+            boolean collectingNestedJson = false;
+            int nestedStartDepth = 0;
+            
+            for (int i = 0; i < jsonStr.length(); i++) {
+                char c = jsonStr.charAt(i);
+                
+                // Handle escape sequences in quotes
+                if (c == '\\' && i + 1 < jsonStr.length() && inQuotes) {
+                    if (collectingNestedJson) {
+                        nestedJson.append(c);
+                        nestedJson.append(jsonStr.charAt(i + 1));
+                    } else if (!keyComplete) {
+                        currentKey.append(c);
+                        currentKey.append(jsonStr.charAt(i + 1));
+                    }
+                    i++; // Skip the escaped character
+                    continue;
+                }
+                
+                // Handle quotes
+                if (c == '"') {
+                    inQuotes = !inQuotes;
+                    if (collectingNestedJson) {
+                        nestedJson.append(c);
+                        continue;
+                    }
+                    
+                    if (!inQuotes && !keyComplete && currentKey.length() > 0) {
+                        keyComplete = true;
+                    } else if (inQuotes && !keyComplete && currentKey.length() == 0) {
+                        // Start of a key, don't add the quote
+                        continue;
+                    }
+                    continue;
+                }
+                
+                // Collect key
+                if (inQuotes && !keyComplete) {
+                    currentKey.append(c);
+                    continue;
+                }
+                
+                // Look for key-value separator
+                if (c == ':' && keyComplete && !collectingNestedJson) {
+                    // Skip to the value
+                    continue;
+                }
+                
+                // Handle nested objects
+                if (c == '{') {
+                    depth++;
+                    if (depth > 1) {
+                        if (!collectingNestedJson) {
+                            collectingNestedJson = true;
+                            nestedStartDepth = depth;
+                        }
+                        nestedJson.append(c);
+                    }
+                    continue;
+                }
+                
+                if (c == '}') {
+                    if (collectingNestedJson) {
+                        nestedJson.append(c);
+                        depth--;
+                        
+                        // If we've closed the nested object we were collecting
+                        if (depth < nestedStartDepth) {
+                            collectingNestedJson = false;
+                            String key = currentKey.toString();
+                            String newPath = currentPath.isEmpty() ? key : currentPath + "/" + key;
+                            
+                            // Process the nested structure
+                            processHierarchicalStructure(newPath, nestedJson.toString());
+                            
+                            // Reset for next key-value pair
+                            currentKey = new StringBuilder();
+                            keyComplete = false;
+                            nestedJson = new StringBuilder();
+                        }
+                    } else {
+                        depth--;
+                    }
+                    continue;
+                }
+                
+                // Collect nested JSON
+                if (collectingNestedJson) {
+                    nestedJson.append(c);
+                    continue;
+                }
+                
+                // Handle null values (files)
+                if (keyComplete && c == 'n' && i + 3 < jsonStr.length() && 
+                    jsonStr.substring(i, i + 4).equals("null")) {
+                    String key = currentKey.toString();
+                    String newPath = currentPath.isEmpty() ? key : currentPath + "/" + key;
+                    
+                    // This is a file
+                    knownProjectStructure.put(key, newPath);
+                    LogUtil.info(ZipFileUtil.class.getName(), "Added file to hierarchical structure: " + key + " -> " + newPath);
+                    
+                    // Skip to end of null
+                    i += 3;
+                    
+                    // Reset for next key-value pair
+                    currentKey = new StringBuilder();
+                    keyComplete = false;
+                    continue;
+                }
+                
+                // Skip whitespace and commas between key-value pairs
+                if (c == ',' || Character.isWhitespace(c)) {
+                    continue;
+                }
+                
+                // If we get here with a complete key, something unexpected happened
+                if (keyComplete && !collectingNestedJson) {
+                    LogUtil.info(ZipFileUtil.class.getName(), "Unexpected character in JSON: " + c + " at position " + i);
+                }
+            }
+        } catch (Exception e) {
+            LogUtil.error(ZipFileUtil.class.getName(), e, "Error processing hierarchical structure at path: " + currentPath);
+        }
     }
     
     /**
@@ -752,17 +957,25 @@ public class ZipFileUtil {
         
         // Add default paths if structure is still empty
         if (knownProjectStructure.isEmpty()) {
-            // Add paths from the exact structure shown in the directory tree
-            knownProjectStructure.put("pom.xml", "pom.xml");
-            knownProjectStructure.put("HelloWorldElement.java", "src/main/java/com/example/joget/plugin/HelloWorldElement.java");
-            knownProjectStructure.put("plugin.properties", "src/resources/plugin.properties");
-            knownProjectStructure.put("helloWorld.html", "src/resources/app/helloWorld/helloWorld.html");
-            knownProjectStructure.put("helloWorld.js", "src/resources/app/helloWorld/helloWorld.js");
+            // Add paths matching the provided example structure
+            String projectRoot = "hello-world-plugin";
             
-            // Also add common variations
-            knownProjectStructure.put("HelloWorldPlugin.java", "src/main/java/com/example/joget/plugin/HelloWorldPlugin.java");
-            knownProjectStructure.put("HelloWorldActivity.java", "src/main/java/com/example/joget/plugin/HelloWorldActivity.java");
-            knownProjectStructure.put("plugin.xml", "src/resources/plugin.xml");
+            // Basic project files
+            knownProjectStructure.put("pom.xml", projectRoot + "/pom.xml");
+            
+            // Java source files
+            String javaPath = projectRoot + "/src/main/java/com/example/joget/plugin/";
+            knownProjectStructure.put("HelloWorldElement.java", javaPath + "HelloWorldElement.java");
+            
+            // Resource files
+            String resourcesPath = projectRoot + "/src/main/resources/";
+            knownProjectStructure.put("plugin.properties", resourcesPath + "plugin.properties");
+            knownProjectStructure.put("plugin.json", resourcesPath + "plugin.json");
+            
+            // Static resources
+            String staticPath = resourcesPath + "static/";
+            knownProjectStructure.put("HelloWorldComponent.jsx", staticPath + "HelloWorldComponent.jsx");
+            knownProjectStructure.put("hello-world.css", staticPath + "hello-world.css");
         }
         
         // Mark as initialized
@@ -907,24 +1120,24 @@ public class ZipFileUtil {
                     if (packageMatcher.find()) {
                         String packageName = packageMatcher.group(1);
                         // Check if it matches the expected package
-                        if (packageName.contains("example") && packageName.contains("joget")) {
-                            folderPath = "src/main/java/" + packageName.replace('.', '/') + "/";
+                        if (packageName.contains("example")) {
+                            folderPath = "hello-world-plugin/src/main/java/" + packageName.replace('.', '/') + "/";
                         } else {
                             // Package doesn't match expected structure, put in other
-                            folderPath = "other/java/";
+                            folderPath = "hello-world-plugin/src/main/java/other/";
                         }
                     } else {
                         // No package but recognized class, use default structure
-                        folderPath = "src/main/java/com/example/joget/plugin/";
+                        folderPath = "hello-world-plugin/src/main/java/com/example/joget/plugin/";
                     }
                 } else {
                     // Not a recognized class, put in other folder
-                    folderPath = "other/java/";
+                    folderPath = "hello-world-plugin/src/main/java/other/";
                 }
             } else {
                 // No class name found
                 fileName = "Unknown" + snippetCounter + fileExtension;
-                folderPath = "other/java/";
+                folderPath = "hello-world-plugin/src/main/java/other/";
             }
         } else if ("javascript".equals(language.toLowerCase()) || "js".equals(language.toLowerCase())) {
             // Try to extract function or class name
@@ -938,11 +1151,11 @@ public class ZipFileUtil {
             }
             
             // Check if it's a recognized file from the project structure
-            if (fileName.equals("helloWorld.js")) {
-                folderPath = "src/resources/app/helloWorld/";
+            if (fileName.equals("main.js") || fileName.equals("app.js")) {
+                folderPath = "hello-world-plugin/src/main/resources/static/";
             } else {
                 // Not recognized, put in other folder
-                folderPath = "other/js/";
+                folderPath = "hello-world-plugin/src/main/resources/static/";
             }
         } else if ("html".equals(language.toLowerCase())) {
             // Try to extract title
@@ -956,39 +1169,39 @@ public class ZipFileUtil {
             }
             
             // Check if it's a recognized file from the project structure
-            if (fileName.equals("helloWorld.html")) {
-                folderPath = "src/resources/app/helloWorld/";
+            if (fileName.equals("index.html") || fileName.contains("page")) {
+                folderPath = "hello-world-plugin/src/main/resources/static/";
             } else {
                 // Not recognized, put in other folder
-                folderPath = "other/html/";
+                folderPath = "hello-world-plugin/src/main/resources/static/";
             }
         } else if ("properties".equals(language.toLowerCase())) {
             // Check if it's plugin.properties
             if (code.contains("plugin.id") || code.contains("plugin.name") || 
                 code.contains("plugin.version") || code.contains("plugin.class")) {
                 fileName = "plugin.properties";
-                folderPath = "src/resources/";
+                folderPath = "hello-world-plugin/src/main/resources/";
             } else {
                 fileName = "config" + snippetCounter + ".properties";
-                folderPath = "other/properties/";
+                folderPath = "hello-world-plugin/src/main/resources/";
             }
         } else if ("xml".equals(language.toLowerCase())) {
             // Check if it's plugin.xml
             if (code.contains("<plugin>") && (code.contains("<id>") || code.contains("<class>"))) {
                 fileName = "plugin.xml";
-                folderPath = "src/resources/";
+                folderPath = "hello-world-plugin/src/main/resources/";
             } else {
                 fileName = "config" + snippetCounter + ".xml";
-                folderPath = "other/xml/";
+                folderPath = "hello-world-plugin/src/main/resources/";
             }
         } else if ("css".equals(language.toLowerCase())) {
-            folderPath = "other/css/";
+            folderPath = "hello-world-plugin/src/main/resources/static/";
             fileName = "style" + snippetCounter + fileExtension;
         } else if ("sql".equals(language.toLowerCase())) {
-            folderPath = "other/sql/";
+            folderPath = "hello-world-plugin/src/main/resources/";
             fileName = "query" + snippetCounter + fileExtension;
         } else if ("json".equals(language.toLowerCase())) {
-            folderPath = "other/json/";
+            folderPath = "hello-world-plugin/src/main/resources/";
             fileName = "config" + snippetCounter + fileExtension;
         } else if ("python".equals(language.toLowerCase()) || "py".equals(language.toLowerCase())) {
             // Try to extract class or function name
@@ -1009,10 +1222,10 @@ public class ZipFileUtil {
             }
             
             // Put in other folder
-            folderPath = "other/python/";
+            folderPath = "hello-world-plugin/src/main/resources/";
         } else {
             // For other languages, use the other folder
-            folderPath = "other/" + language.toLowerCase() + "/";
+            folderPath = "hello-world-plugin/src/main/resources/other/" + language.toLowerCase() + "/";
             fileName = "snippet_" + snippetCounter + fileExtension;
         }
         

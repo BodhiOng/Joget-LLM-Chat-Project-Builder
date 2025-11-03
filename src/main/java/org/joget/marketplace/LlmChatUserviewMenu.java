@@ -292,7 +292,7 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
         html.append("                // Show error message\n");
         html.append("                let errorText = 'Error communicating with the LLM API';\n");
         html.append("                try {\n");
-        html.append("                    console.log('Raw error response:', xhr.responseText);\n");
+        html.append("                    console.log('  or response:', xhr.responseText);\n");
         html.append("                    console.log('Status code:', xhr.status);\n");
         html.append("                    console.log('Error:', error);\n");
         html.append("                    \n");

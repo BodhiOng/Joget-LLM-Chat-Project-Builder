@@ -38,20 +38,68 @@ public class ZipFileUtil {
         ZipOutputStream zos = new ZipOutputStream(baos);
         
         try {
-            // Add each code snippet to the zip file
+            // Track which paths have been added to the zip
+            Map<String, Boolean> addedPaths = new HashMap<>();
+            
+            // Add each code snippet to the zip file, but only if it matches our project structure
             for (Map.Entry<String, String> entry : codeSnippets.entrySet()) {
                 String filePath = entry.getKey();
                 String codeContent = entry.getValue();
                 
-                // Create a new zip entry
-                ZipEntry zipEntry = new ZipEntry(filePath);
-                zos.putNextEntry(zipEntry);
+                // Check if this file path is in our project structure
+                boolean shouldInclude = false;
+                String normalizedPath = null;
                 
-                // Write the code content to the zip file
-                zos.write(codeContent.getBytes());
+                // First check if the path is directly in our structure
+                if (knownProjectStructure.containsValue(filePath)) {
+                    shouldInclude = true;
+                    normalizedPath = filePath;
+                } else {
+                    // Check if the file name matches any path in our structure
+                    String fileName = filePath.contains("/") ? 
+                        filePath.substring(filePath.lastIndexOf("/") + 1) : filePath;
+                    
+                    for (Map.Entry<String, String> structureEntry : knownProjectStructure.entrySet()) {
+                        String structurePath = structureEntry.getValue();
+                        if (structurePath.endsWith("/" + fileName)) {
+                            shouldInclude = true;
+                            normalizedPath = structurePath;
+                            break;
+                        }
+                    }
+                }
                 
-                // Close the zip entry
-                zos.closeEntry();
+                if (shouldInclude && normalizedPath != null) {
+                    // Create a new zip entry with the normalized path
+                    ZipEntry zipEntry = new ZipEntry(normalizedPath);
+                    zos.putNextEntry(zipEntry);
+                    
+                    // Write the code content to the zip file
+                    zos.write(codeContent.getBytes());
+                    
+                    // Close the zip entry
+                    zos.closeEntry();
+                    
+                    // Mark this path as added
+                    addedPaths.put(normalizedPath, true);
+                    
+                    LogUtil.info(ZipFileUtil.class.getName(), "Added file to zip: " + normalizedPath);
+                } else {
+                    LogUtil.info(ZipFileUtil.class.getName(), "Skipped file not in project structure: " + filePath);
+                }
+            }
+            
+            // Check for any files in the project structure that weren't found in code snippets
+            // and create empty files for them
+            for (String structurePath : knownProjectStructure.values()) {
+                if (!addedPaths.containsKey(structurePath)) {
+                    // Create an empty file for this path
+                    ZipEntry zipEntry = new ZipEntry(structurePath);
+                    zos.putNextEntry(zipEntry);
+                    zos.closeEntry();
+                    
+                    LogUtil.info(ZipFileUtil.class.getName(), "Added empty file to zip for missing content: " + structurePath);
+                }
             }
         } finally {
             // Close the zip output stream
@@ -59,7 +107,7 @@ public class ZipFileUtil {
         }
         
         byte[] zipData = baos.toByteArray();
-        LogUtil.info(ZipFileUtil.class.getName(), "Created zip file with " + codeSnippets.size() + " code snippets, zip size: " + zipData.length + " bytes");
+        LogUtil.info(ZipFileUtil.class.getName(), "Created zip file with project structure, zip size: " + zipData.length + " bytes");
         return zipData;
     }
     
@@ -650,14 +698,14 @@ public class ZipFileUtil {
             }
         }
         
-        // Pattern 3: Any JSON object with nested structure
+        // Pattern 3: Any JSON object with nested structure and null values (files)
         if (!found) {
-            Pattern anyJsonPattern = Pattern.compile("\\{[\\s\\S]*?\\{[\\s\\S]*?null[\\s\\S]*?\\}[\\s\\S]*?\\}");
+            Pattern anyJsonPattern = Pattern.compile("\\{[\\s\\S]*?\"[^\"]+\"\\s*:\\s*null[\\s\\S]*?\\}");
             Matcher anyJsonMatcher = anyJsonPattern.matcher(chatContent);
             if (anyJsonMatcher.find()) {
                 jsonBlock = anyJsonMatcher.group(0).trim();
                 found = true;
-                LogUtil.info(ZipFileUtil.class.getName(), "Found hierarchical JSON structure with nested objects");
+                LogUtil.info(ZipFileUtil.class.getName(), "Found hierarchical JSON structure with null values (files)");
             }
         }
         
@@ -798,9 +846,10 @@ public class ZipFileUtil {
                     String key = currentKey.toString();
                     String newPath = currentPath.isEmpty() ? key : currentPath + "/" + key;
                     
-                    // This is a file
-                    knownProjectStructure.put(key, newPath);
-                    LogUtil.info(ZipFileUtil.class.getName(), "Added file to hierarchical structure: " + key + " -> " + newPath);
+                    // This is a file - in the project structure format, null indicates a file
+                    // Store the full path with the root folder as the key for easy lookup
+                    knownProjectStructure.put(newPath, newPath);
+                    LogUtil.info(ZipFileUtil.class.getName(), "Added file to hierarchical structure: " + newPath);
                     
                     // Skip to end of null
                     i += 3;
@@ -944,14 +993,17 @@ public class ZipFileUtil {
      * @param chatContent The chat content to analyze for project structure, or null to use defaults
      */
     private static void initializeProjectStructure(String chatContent) {
-        if (projectStructureInitialized) {
-            return;
-        }
+        // Always reinitialize the project structure from the chat content
+        knownProjectStructure.clear();
+        projectStructureInitialized = false;
         
-        // Extract JSON project structure - only use JSON format as requested
+        // Extract hierarchical JSON project structure
         boolean foundJson = false;
         if (chatContent != null) {
-            foundJson = extractProjectStructureFromJson(chatContent);
+            foundJson = extractHierarchicalProjectStructure(chatContent);
+            if (!foundJson) {
+                foundJson = extractProjectStructureFromJson(chatContent);
+            }
             LogUtil.info(ZipFileUtil.class.getName(), "JSON project structure extraction result: " + (foundJson ? "found" : "not found"));
         }
         
@@ -970,12 +1022,6 @@ public class ZipFileUtil {
             // Resource files
             String resourcesPath = projectRoot + "/src/main/resources/";
             knownProjectStructure.put("plugin.properties", resourcesPath + "plugin.properties");
-            knownProjectStructure.put("plugin.json", resourcesPath + "plugin.json");
-            
-            // Static resources
-            String staticPath = resourcesPath + "static/";
-            knownProjectStructure.put("HelloWorldComponent.jsx", staticPath + "HelloWorldComponent.jsx");
-            knownProjectStructure.put("hello-world.css", staticPath + "hello-world.css");
         }
         
         // Mark as initialized

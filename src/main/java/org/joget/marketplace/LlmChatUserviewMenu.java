@@ -83,7 +83,8 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
         html.append(
                 "    <div id=\"chatMessages\" style=\"height: 500px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 15px; background-color: #f9f9f9;\">\n");
         html.append(
-                "        <div class=\"message bot-message\" style=\"margin-bottom: 15px; padding: 10px; border-radius: 5px; max-width: 80%; background-color: #ffffff; margin-right: auto; margin-left: 10px; border: 1px solid #e0e0e0;\">\n");
+                "        <div class=\"message bot-message\"\n");
+        html.append("            style=\"background-color: #ffffff; margin-right: auto; margin-left: 10px; border: 1px solid #e0e0e0;\">\n");
         html.append("            Hello! How can I assist you today?\n");
         html.append("        </div>\n");
         html.append("    </div>\n");
@@ -627,6 +628,31 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
         html.append("    });\n");
         html.append("});\n");
         html.append("</script>\n");
+
+        // Add CSS to adjust chat message width
+        html.append("<style>\n");
+        html.append("    .message {\n");
+        html.append("        margin-bottom: 15px;\n");
+        html.append("        padding: 10px;\n");
+        html.append("        border-radius: 5px;\n");
+        html.append("        max-width: 90%;\n");
+        html.append("        width: fit-content;\n");
+        html.append("        word-wrap: break-word;\n");
+        html.append("    }\n");
+        html.append("    \n");
+        html.append("    .user-message {\n");
+        html.append("        background-color: #dcf8c6;\n");
+        html.append("        margin-left: auto;\n");
+        html.append("        margin-right: 10px;\n");
+        html.append("    }\n");
+        html.append("    \n");
+        html.append("    .bot-message {\n");
+        html.append("        background-color: #ffffff;\n");
+        html.append("        margin-right: auto;\n");
+        html.append("        margin-left: 10px;\n");
+        html.append("        border: 1px solid #e0e0e0;\n");
+        html.append("    }\n");
+        html.append("</style>\n");
 
         return html.toString();
     }

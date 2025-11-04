@@ -47,7 +47,8 @@
                             margin-bottom: 15px;
                             padding: 10px;
                             border-radius: 5px;
-                            max-width: 80%;
+                            max-width: 90%;
+                            width: fit-content;
                             word-wrap: break-word;
                         }
 
@@ -244,7 +245,7 @@
 
                         <div class="chat-messages" id="chatMessages">
                             <div class="message bot-message"
-                                style="background-color: #ffffff; margin-right: auto; margin-left: 10px; border: 1px solid #e0e0e0;">
+                                style="background-color: #ffffff; margin-right: auto; margin-left: 10px; border: 1px solid #e0e0e0; max-width: 80%;">
                                 Hello! How can I assist you today?
                             </div>
                         </div>
@@ -862,7 +863,7 @@
                                         }
                                     });
                                 }
-                            });
+                            }
             }
 
                         // Send message when button is clicked

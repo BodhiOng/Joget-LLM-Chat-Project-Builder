@@ -63,6 +63,7 @@ public class OllamaApiClient {
                 "   a. First, write the file number and filename (without the directory) in the format \"File [num]: [filename]\" on a separate line.\n" +
                 "   b. Then, on the next line, write \"Code: \" followed by the code block.\n" +
                 "Always add a directory structure at the end of your response with this exact format:\n" +
+                "**Project layout**\n" +
                 "```json\n{\n  \"hello-world-plugin\": {\n    \"pom.xml\": null,\n    \"src\": {\n      \"main\": {\n        \"java\": {\n          \"com\": {\n            \"example\": {\n              \"joget\": {\n                \"plugin\": {\n                  \"HelloWorldElement.java\": null\n                }\n              }\n            }\n          }\n        },\n        \"resources\": {\n          \"plugin.properties\": null\n        }\n      }\n    }\n  }\n}\n```\n" +
                 "This hierarchical structure should represent the complete project directory layout with all files. " +
                 "Files are represented as keys with null values, and directories are represented as nested objects. " +
@@ -78,7 +79,7 @@ public class OllamaApiClient {
 
         // Log the request payload
         String requestPayload = requestBody.toString();
-        LogUtil.info(OllamaApiClient.class.getName(), "Non-streaming request payload: " + requestPayload);
+        // LogUtil.info(OllamaApiClient.class.getName(), "Non-streaming request payload: " + requestPayload);
 
         // Send the request
         try (OutputStream os = connection.getOutputStream()) {
@@ -207,6 +208,7 @@ public class OllamaApiClient {
                 "   a. First, write the file number and filename (without the directory) in the format \"File [num]: [filename]\" on a separate line.\n" +
                 "   b. Then, on the next line, write \"Code: \" followed by the code block.\n" +
                 "Always add a directory structure at the end of your response with this exact format:\n" +
+                "**Project layout**\n" +
                 "```json\n{\n  \"hello-world-plugin\": {\n    \"pom.xml\": null,\n    \"src\": {\n      \"main\": {\n        \"java\": {\n          \"com\": {\n            \"example\": {\n              \"joget\": {\n                \"plugin\": {\n                  \"HelloWorldElement.java\": null\n                }\n              }\n            }\n          }\n        },\n        \"resources\": {\n          \"plugin.properties\": null\n        }\n      }\n    }\n  }\n}\n```\n" +
                 "This hierarchical structure should represent the complete project directory layout with all files. " +
                 "Files are represented as keys with null values, and directories are represented as nested objects. " +

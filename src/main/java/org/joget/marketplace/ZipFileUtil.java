@@ -20,7 +20,6 @@ import org.json.JSONObject;
  * Utility class for creating zip files from code snippets
  */
 public class ZipFileUtil {
-
     /**
      * Creates a zip file from chat content containing code snippets
      * 
@@ -66,37 +65,30 @@ public class ZipFileUtil {
         Map<String, String> codeFiles = new HashMap<>();
 
         // Log a sample of the chat content for debugging
-        LogUtil.info(ZipFileUtil.class.getName(), "Chat content sample for debugging: " + 
-                     (chatContent.length() > 200 ? chatContent.substring(0, 200) + "..." : chatContent));
+        LogUtil.info(ZipFileUtil.class.getName(), "Chat content sample for debugging: " +
+                (chatContent.length() > 200 ? chatContent.substring(0, 200) + "..." : chatContent));
 
         // Track the current file being processed
         String currentFileName = null;
 
         // Patterns to match file headers in different formats
         List<Pattern> fileHeaderPatterns = new ArrayList<>();
-        // Pattern for <h3>File 1: filename.ext</h3>
-        fileHeaderPatterns.add(Pattern.compile("<h3>File\\s+\\d+:?\\s+([^<]+)</h3>"));
         // Pattern for <strong>File 1: filename.ext</strong>
         fileHeaderPatterns.add(Pattern.compile("<strong>File\\s+\\d+:?\\s+([^<]+)</strong>"));
-        // Pattern for <strong>File 1:</strong> <code>filename.ext</code>
-        fileHeaderPatterns.add(Pattern.compile("<strong>File\\s+\\d+:?</strong>\\s*<code>([^<]+)</code>"));
-        // Pattern for <strong>File X:</strong> filename.ext
-        fileHeaderPatterns.add(Pattern.compile("<strong>File\\s+\\d+:?</strong>\\s*([^<\\n]+)"));
-        // Pattern for <h3>File X:</h3> <code>filename.ext</code>
-        fileHeaderPatterns.add(Pattern.compile("<h3>File\\s+\\d+:?</h3>\\s*<code>([^<]+)</code>"));
-        // Pattern for <h3>File X:</h3> filename.ext
-        fileHeaderPatterns.add(Pattern.compile("<h3>File\\s+\\d+:?</h3>\\s*([^<\\n]+)"));
 
         // Patterns to match code blocks
         List<Pattern> codeBlockPatterns = new ArrayList<>();
         // HTML code blocks with language and double underscore separators
-        codeBlockPatterns.add(Pattern.compile("<pre><code\\s+class=\"language-([^\"]+)\">(.*?)</code></pre>__", Pattern.DOTALL));
+        codeBlockPatterns
+                .add(Pattern.compile("<pre><code\\s+class=\"language-([^\"]+)\">(.*?)</code></pre>__", Pattern.DOTALL));
         // HTML code blocks with language
-        codeBlockPatterns.add(Pattern.compile("<pre><code\\s+class=\"language-([^\"]+)\">(.*?)</code></pre>", Pattern.DOTALL));
+        codeBlockPatterns
+                .add(Pattern.compile("<pre><code\\s+class=\"language-([^\"]+)\">(.*?)</code></pre>", Pattern.DOTALL));
         // HTML code blocks without language
         codeBlockPatterns.add(Pattern.compile("<pre><code>(.*?)</code></pre>", Pattern.DOTALL));
         // Code block container
-        codeBlockPatterns.add(Pattern.compile("<div class=\"code-block-container\"><pre>(.*?)</pre></div>", Pattern.DOTALL));
+        codeBlockPatterns
+                .add(Pattern.compile("<div class=\"code-block-container\"><pre>(.*?)</pre></div>", Pattern.DOTALL));
         // Simple pre tags
         codeBlockPatterns.add(Pattern.compile("<pre>(.*?)</pre>", Pattern.DOTALL));
         // Markdown code fences with language
@@ -109,19 +101,21 @@ public class ZipFileUtil {
             Pattern fileHeaderPattern = fileHeaderPatterns.get(i);
             Matcher fileHeaderMatcher = fileHeaderPattern.matcher(chatContent);
             int lastEnd = 0;
-            
-            LogUtil.info(ZipFileUtil.class.getName(), "Trying file header pattern #" + (i+1) + ": " + fileHeaderPattern.pattern());
+
+            LogUtil.info(ZipFileUtil.class.getName(),
+                    "Trying file header pattern #" + (i + 1) + ": " + fileHeaderPattern.pattern());
 
             while (fileHeaderMatcher.find()) {
                 currentFileName = fileHeaderMatcher.group(1).trim();
-                LogUtil.info(ZipFileUtil.class.getName(), "Found file header match with pattern #" + (i+1) + ": " + currentFileName);
-                
+                LogUtil.info(ZipFileUtil.class.getName(),
+                        "Found file header match with pattern #" + (i + 1) + ": " + currentFileName);
+
                 // Remove code tags if present
                 if (currentFileName.startsWith("<code>") && currentFileName.endsWith("</code>")) {
                     currentFileName = currentFileName.substring(6, currentFileName.length() - 7).trim();
                     LogUtil.info(ZipFileUtil.class.getName(), "Cleaned filename: " + currentFileName);
                 }
-                
+
                 lastEnd = fileHeaderMatcher.end();
 
                 // Look for code block after the file header
@@ -129,11 +123,13 @@ public class ZipFileUtil {
                 for (int j = 0; j < codeBlockPatterns.size(); j++) {
                     Pattern pattern = codeBlockPatterns.get(j);
                     Matcher codeMatcher = pattern.matcher(chatContent);
-                    LogUtil.info(ZipFileUtil.class.getName(), "Trying code block pattern #" + (j+1) + " for file: " + currentFileName);
-                    
+                    LogUtil.info(ZipFileUtil.class.getName(),
+                            "Trying code block pattern #" + (j + 1) + " for file: " + currentFileName);
+
                     if (codeMatcher.find(lastEnd)) {
-                        LogUtil.info(ZipFileUtil.class.getName(), "Found code block match with pattern #" + (j+1) + " for file: " + currentFileName);
-                        
+                        LogUtil.info(ZipFileUtil.class.getName(),
+                                "Found code block match with pattern #" + (j + 1) + " for file: " + currentFileName);
+
                         String codeContent;
                         if (codeMatcher.groupCount() > 1) {
                             // If the pattern has a language group, use the second group for content
@@ -170,7 +166,7 @@ public class ZipFileUtil {
                 }
             }
         }
-        
+
         // Look for "Code:" pattern
         Pattern codePattern = Pattern.compile("<strong>Code:</strong></p>__<pre>");
         Matcher codeMatcher = codePattern.matcher(chatContent);
@@ -192,35 +188,38 @@ public class ZipFileUtil {
     private static JSONObject extractProjectStructure(String chatContent) {
         try {
             // First try to find the Project layout marker followed by JSON
-            Pattern projectLayoutPattern = Pattern.compile("<p><strong>Project layout</strong></p>\\s*<pre><code class=\"language-json\">(.*?)</code></pre>", Pattern.DOTALL);
+            Pattern projectLayoutPattern = Pattern.compile(
+                    "<p><strong>Project layout</strong></p>\\s*<pre><code class=\"language-json\">(.*?)</code></pre>",
+                    Pattern.DOTALL);
             Matcher projectLayoutMatcher = projectLayoutPattern.matcher(chatContent);
-            
+
             if (projectLayoutMatcher.find()) {
                 String jsonStr = projectLayoutMatcher.group(1);
                 LogUtil.info(ZipFileUtil.class.getName(), "Found project structure JSON with Project layout marker");
                 return new JSONObject(jsonStr);
             }
-            
+
             // Fallback to the original pattern without the marker
             Pattern jsonPattern = Pattern.compile("```json\\s*\\n(.*?)\\n```", Pattern.DOTALL);
             Matcher jsonMatcher = jsonPattern.matcher(chatContent);
-            
+
             if (jsonMatcher.find()) {
                 String jsonStr = jsonMatcher.group(1);
                 LogUtil.info(ZipFileUtil.class.getName(), "Found project structure JSON with code fence");
                 return new JSONObject(jsonStr);
             }
-            
+
             // Try another common pattern with HTML tags
-            Pattern htmlJsonPattern = Pattern.compile("<pre><code class=\"language-json\">(.*?)</code></pre>", Pattern.DOTALL);
+            Pattern htmlJsonPattern = Pattern.compile("<pre><code class=\"language-json\">(.*?)</code></pre>",
+                    Pattern.DOTALL);
             Matcher htmlJsonMatcher = htmlJsonPattern.matcher(chatContent);
-            
+
             if (htmlJsonMatcher.find()) {
                 String jsonStr = htmlJsonMatcher.group(1);
                 LogUtil.info(ZipFileUtil.class.getName(), "Found project structure JSON with HTML tags");
                 return new JSONObject(jsonStr);
             }
-            
+
             LogUtil.info(ZipFileUtil.class.getName(), "No project structure JSON found");
             return null;
         } catch (JSONException e) {
@@ -254,7 +253,8 @@ public class ZipFileUtil {
             LogUtil.info(ZipFileUtil.class.getName(), "Root directory: " + rootDir);
             LogUtil.info(ZipFileUtil.class.getName(), "Found " + filePathMap.size() + " file paths in JSON structure");
             for (Map.Entry<String, String> entry : filePathMap.entrySet()) {
-                LogUtil.info(ZipFileUtil.class.getName(), "  File path: " + entry.getValue() + " (key: " + entry.getKey() + ")");
+                LogUtil.info(ZipFileUtil.class.getName(),
+                        "  File path: " + entry.getValue() + " (key: " + entry.getKey() + ")");
             }
 
             // Create a map of full paths to code content
@@ -265,14 +265,14 @@ public class ZipFileUtil {
                 String filename = entry.getKey();
                 String content = entry.getValue();
                 boolean fileAdded = false;
-                
+
                 LogUtil.info(ZipFileUtil.class.getName(), "Processing file: " + filename);
 
                 // Try to find an exact match in the file path map
                 for (Map.Entry<String, String> pathEntry : filePathMap.entrySet()) {
                     String key = pathEntry.getKey();
                     String path = pathEntry.getValue();
-                    
+
                     // Check if the filename matches the end of the path or the key exactly
                     if (path.endsWith("/" + filename) || key.equals(filename)) {
                         pathToContentMap.put(path, content);
@@ -287,7 +287,7 @@ public class ZipFileUtil {
                     for (Map.Entry<String, String> pathEntry : filePathMap.entrySet()) {
                         String key = pathEntry.getKey();
                         String path = pathEntry.getValue();
-                        
+
                         if (key.equals(filename)) {
                             pathToContentMap.put(path, content);
                             fileAdded = true;
@@ -322,8 +322,7 @@ public class ZipFileUtil {
      * @param filePathMap Map to store file paths
      * @return The root directory name
      */
-    private static String extractHierarchicalProjectStructure(JSONObject json, String currentPath,
-            Map<String, String> filePathMap) {
+    private static String extractHierarchicalProjectStructure(JSONObject json, String currentPath, Map<String, String> filePathMap) {
         String rootDir = null;
 
         try {
@@ -331,7 +330,7 @@ public class ZipFileUtil {
             if (currentPath.isEmpty() && json.keys().hasNext()) {
                 rootDir = json.keys().next();
                 currentPath = rootDir;
-                
+
                 // Log the root directory
                 LogUtil.info(ZipFileUtil.class.getName(), "Found root directory: " + rootDir);
             }
@@ -341,11 +340,11 @@ public class ZipFileUtil {
                 // Skip if the key is the same as the last path segment
                 String newPath;
                 if (currentPath.endsWith("/" + key) || currentPath.equals(key)) {
-                    newPath = currentPath;  // Avoid duplicating directory names
+                    newPath = currentPath; // Avoid duplicating directory names
                 } else {
                     newPath = currentPath.isEmpty() ? key : currentPath + "/" + key;
                 }
-                
+
                 Object value = json.get(key);
 
                 if (value instanceof JSONObject) {
@@ -354,7 +353,8 @@ public class ZipFileUtil {
                 } else if (value == null || value.equals(JSONObject.NULL)) {
                     // This is a file (null value)
                     filePathMap.put(key, newPath);
-                    LogUtil.info(ZipFileUtil.class.getName(), "Found file in JSON structure: " + newPath + " (key: " + key + ")");
+                    LogUtil.info(ZipFileUtil.class.getName(),
+                            "Found file in JSON structure: " + newPath + " (key: " + key + ")");
                 }
             }
 

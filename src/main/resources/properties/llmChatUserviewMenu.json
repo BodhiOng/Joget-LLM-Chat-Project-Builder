@@ -42,15 +42,6 @@
                 "label": "System Prompt",
                 "type": "textarea",
                 "value": "You are a helpful assistant."
-            },
-            {
-                "name": "useStreaming",
-                "label": "Use Streaming",
-                "type": "checkbox",
-                "options": [{
-                    "value": "true",
-                    "label": "Enable streaming responses with buffering animation"
-                }]
             }
         ]
     }

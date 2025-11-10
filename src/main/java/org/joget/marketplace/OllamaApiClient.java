@@ -56,19 +56,19 @@ public class OllamaApiClient {
         requestBody.put("prompt", message);
 
         // Enhance system prompt to request project structure in JSON format for code-related prompts
-        String enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
+        String enhancedSystemPrompt = systemPrompt + 
+                "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
                 "When answering ANY coding-related questions, you MUST:\n" +
                 "1. Include a hierarchical project structure in JSON format at the end of your response\n" +
                 "2. For each code block:\n" +
                 "   a. First, write the file number and filename (without the directory) in the format \"File [num]: [filename]\" on a separate line.\n" +
-                "   b. Then, on the next line, write \"Code: \" followed by the code block.\n" +
+                "   b. Then, on the next line, write \"Code: \" followed by the code block\n" +
                 "Always add a directory structure at the end of your response with this exact format:\n" +
                 "**Project layout**\n" +
                 "```json\n{\n  \"hello-world-plugin\": {\n    \"pom.xml\": null,\n    \"src\": {\n      \"main\": {\n        \"java\": {\n          \"com\": {\n            \"example\": {\n              \"joget\": {\n                \"plugin\": {\n                  \"HelloWorldElement.java\": null\n                }\n              }\n            }\n          }\n        },\n        \"resources\": {\n          \"plugin.properties\": null\n        }\n      }\n    }\n  }\n}\n```\n" +
                 "This hierarchical structure should represent the complete project directory layout with all files. " +
                 "Files are represented as keys with null values, and directories are represented as nested objects. " +
                 "This is REQUIRED for ALL code-related responses without exception.";
-
         requestBody.put("system", enhancedSystemPrompt);
 
         // Add temperature
@@ -79,7 +79,7 @@ public class OllamaApiClient {
 
         // Log the request payload
         String requestPayload = requestBody.toString();
-        // LogUtil.info(OllamaApiClient.class.getName(), "Non-streaming request payload: " + requestPayload);
+        LogUtil.info(OllamaApiClient.class.getName(), "Non-streaming request payload: " + requestPayload);
 
         // Send the request
         try (OutputStream os = connection.getOutputStream()) {
@@ -163,138 +163,7 @@ public class OllamaApiClient {
         }
     }
 
-    /**
-     * Calls the Ollama API with streaming enabled
-     * 
-     * @param message      User message to send to the API
-     * @param apiEndpoint  API endpoint URL (defaults to Ollama local endpoint if
-     *                     null)
-     * @param model        Model name to use (e.g., "llama2")
-     * @param systemPrompt System prompt to set context
-     * @param temperature  Temperature parameter (0.0 to 1.0)
-     * @param callback     Callback function to handle streaming responses
-     * @throws IOException   If there's an error communicating with the API
-     * @throws JSONException If there's an error parsing the JSON response
-     */
-    public static void callOllamaApiStreaming(String message, String apiEndpoint,
-            String model, String systemPrompt, double temperature,
-            StreamingResponseCallback callback)
-            throws IOException, JSONException {
-
-        if (apiEndpoint == null || apiEndpoint.trim().isEmpty()) {
-            apiEndpoint = DEFAULT_OLLAMA_ENDPOINT;
-        }
-
-        if (model == null || model.trim().isEmpty()) {
-            model = "llama2";
-        }
-
-        URL url = new URL(apiEndpoint);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json");
-        connection.setDoOutput(true);
-
-        // Create the request body
-        JSONObject requestBody = new JSONObject();
-        requestBody.put("model", model);
-        requestBody.put("prompt", message);
-
-        // Enhance system prompt to request project structure in JSON format for code-related prompts
-        String enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
-                "When answering ANY coding-related questions, you MUST:\n" +
-                "1. Include a hierarchical project structure in JSON format at the end of your response\n" +
-                "2. For each code block:\n" +
-                "   a. First, write the file number and filename (without the directory) in the format \"File [num]: [filename]\" on a separate line.\n" +
-                "   b. Then, on the next line, write \"Code: \" followed by the code block.\n" +
-                "Always add a directory structure at the end of your response with this exact format:\n" +
-                "**Project layout**\n" +
-                "```json\n{\n  \"hello-world-plugin\": {\n    \"pom.xml\": null,\n    \"src\": {\n      \"main\": {\n        \"java\": {\n          \"com\": {\n            \"example\": {\n              \"joget\": {\n                \"plugin\": {\n                  \"HelloWorldElement.java\": null\n                }\n              }\n            }\n          }\n        },\n        \"resources\": {\n          \"plugin.properties\": null\n        }\n      }\n    }\n  }\n}\n```\n" +
-                "This hierarchical structure should represent the complete project directory layout with all files. " +
-                "Files are represented as keys with null values, and directories are represented as nested objects. " +
-                "This is REQUIRED for ALL code-related responses without exception.";
-
-        requestBody.put("system", enhancedSystemPrompt);
-
-        // Add temperature
-        requestBody.put("temperature", temperature);
-
-        // Set stream to true to get streaming responses
-        requestBody.put("stream", true);
-
-        // Log the request payload
-        String requestPayload = requestBody.toString();
-        LogUtil.info(OllamaApiClient.class.getName(), "Streaming request payload: " + requestPayload);
-
-        // Send the request
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestPayload.getBytes(StandardCharsets.UTF_8);
-            os.write(input, 0, input.length);
-        }
-
-        // Check if the request was successful
-        int responseCode = connection.getResponseCode();
-        if (responseCode >= 400) {
-            StringBuilder errorResponse = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(
-                    new InputStreamReader(
-                            connection.getErrorStream() != null ? connection.getErrorStream()
-                                    : new java.io.ByteArrayInputStream(new byte[0]),
-                            StandardCharsets.UTF_8))) {
-                String responseLine;
-                while ((responseLine = br.readLine()) != null) {
-                    errorResponse.append(responseLine.trim());
-                }
-            }
-
-            String errorMessage = "Ollama streaming API error (code " + responseCode + ")";
-            if (errorResponse.length() > 0) {
-                errorMessage += ": " + errorResponse.toString();
-            }
-
-            LogUtil.error(OllamaApiClient.class.getName(), null, errorMessage);
-            throw new IOException(errorMessage);
-        }
-
-        // Read the streaming response
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-            String responseLine;
-            while ((responseLine = br.readLine()) != null) {
-                if (!responseLine.trim().isEmpty()) {
-                    try {
-                        String trimmedLine = responseLine.trim();
-                        LogUtil.debug(OllamaApiClient.class.getName(), "Streaming chunk: " + trimmedLine);
-
-                        JSONObject jsonResponse = new JSONObject(trimmedLine);
-                        if (jsonResponse.has("response")) {
-                            String responseChunk = jsonResponse.getString("response");
-                            callback.onResponseChunk(responseChunk);
-                        }
-
-                        // Check if this is the final response
-                        if (jsonResponse.has("done") && jsonResponse.getBoolean("done")) {
-                            callback.onComplete();
-                            break;
-                        }
-                    } catch (JSONException e) {
-                        LogUtil.error(OllamaApiClient.class.getName(), e,
-                                "Failed to parse streaming response: " + responseLine);
-                        // Continue processing other chunks
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Interface for handling streaming responses
-     */
-    public interface StreamingResponseCallback {
-        void onResponseChunk(String chunk);
-
-        void onComplete();
-    }
+    // Streaming functionality has been removed
 
     /**
      * Gets a list of available models from the Ollama API

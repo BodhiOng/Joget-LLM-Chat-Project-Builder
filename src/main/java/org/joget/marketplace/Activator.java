@@ -2,6 +2,7 @@ package org.joget.marketplace;
 
 import java.util.ArrayList;
 import java.util.Collection;
+
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
@@ -13,7 +14,7 @@ public class Activator implements BundleActivator {
     public void start(BundleContext context) {
         registrationList = new ArrayList<ServiceRegistration>();
 
-        //Register plugins here
+        // Register plugin
         registrationList.add(context.registerService(LlmChatUserviewMenu.class.getName(), new LlmChatUserviewMenu(), null));
     }
 

@@ -744,8 +744,6 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(5000); // 5 seconds timeout
 
-                int responseCode = connection.getResponseCode();
-
                 // Always return a simple JSON response
                 response.getWriter().write("{\"status\":\"ok\"}");
             } catch (Exception e) {
@@ -838,8 +836,7 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
                 // Send error response
                 sendJsonResponse(response, "error", "Error creating zip file: " + e.getMessage());
             }
-        } else if ("sendMessage".equals(action) || "streamMessage".equals(action)) {
-            boolean isStreaming = "streamMessage".equals(action);
+        } else if ("sendMessage".equals(action)) {
             try {
                 // Get message from request
                 String message = request.getParameter("message");
@@ -860,81 +857,34 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
                 }
 
                 // Call Ollama API
-                if (!isStreaming) {
-                    // Non-streaming mode
-                    String result;
-                    try {
-                        result = OllamaApiClient.callOllamaApi(
-                                message,
-                                apiEndpoint,
-                                model,
-                                systemPrompt,
-                                temperature);
+                String result;
+                try {
+                    result = OllamaApiClient.callOllamaApi(
+                            message,
+                            apiEndpoint,
+                            model,
+                            systemPrompt,
+                            temperature);
 
-                        // Log the response for debugging
-                        LogUtil.info(getClassName(), "Sending response to client: " + result);
+                    // Log the response for debugging
+                    LogUtil.info(getClassName(), "Sending response to client: " + result);
 
-                        // Return a proper JSON response
-                        response.setContentType("application/json;charset=UTF-8");
-                        JSONObject jsonResponse = new JSONObject();
-                        jsonResponse.put("response", result);
-                        response.getWriter().write(jsonResponse.toString());
-                    } catch (Exception e) {
-                        LogUtil.error(getClassName(), e, "Error calling Ollama API: " + e.getMessage());
-                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    // Return a proper JSON response
+                    response.setContentType("application/json;charset=UTF-8");
+                    JSONObject jsonResponse = new JSONObject();
+                    jsonResponse.put("response", result);
+                    response.getWriter().write(jsonResponse.toString());
+                } catch (Exception e) {
+                    LogUtil.error(getClassName(), e, "Error calling Ollama API: " + e.getMessage());
+                    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 
-                        // Send a proper JSON error response
-                        response.setContentType("application/json;charset=UTF-8");
-                        String errorMessage = e.getMessage() != null ? e.getMessage()
-                                : "Error connecting to Ollama API";
-                        JSONObject jsonError = new JSONObject();
-                        jsonError.put("error", errorMessage);
-                        response.getWriter().write(jsonError.toString());
-                    }
-                } else {
-                    // Streaming mode - use Server-Sent Events
-                    response.setContentType("text/event-stream");
-                    response.setCharacterEncoding("UTF-8");
-                    response.setHeader("Cache-Control", "no-cache");
-                    response.setHeader("Connection", "keep-alive");
-
-                    final PrintWriter writer = response.getWriter();
-
-                    try {
-                        // Create a callback for handling streaming responses
-                        OllamaApiClient.StreamingResponseCallback callback = new OllamaApiClient.StreamingResponseCallback() {
-                            @Override
-                            public void onResponseChunk(String chunk) {
-                                JSONObject jsonChunk = new JSONObject();
-                                jsonChunk.put("chunk", chunk);
-                                writer.write("data: " + jsonChunk.toString() + "\n\n");
-                                writer.flush();
-                            }
-
-                            @Override
-                            public void onComplete() {
-                                JSONObject jsonDone = new JSONObject();
-                                jsonDone.put("done", true);
-                                writer.write("data: " + jsonDone.toString() + "\n\n");
-                                writer.flush();
-                            }
-                        };
-                        
-                        // Call Ollama API with streaming
-                        OllamaApiClient.callOllamaApiStreaming(
-                                message,
-                                apiEndpoint,
-                                model,
-                                systemPrompt,
-                                temperature,
-                                callback);
-                    } catch (Exception e) {
-                        LogUtil.error(getClassName(), e, "Error in streaming response from Ollama API");
-                        JSONObject jsonError = new JSONObject();
-                        jsonError.put("error", e.getMessage());
-                        writer.write("data: " + jsonError.toString() + "\n\n");
-                        writer.flush();
-                    }
+                    // Send a proper JSON error response
+                    response.setContentType("application/json;charset=UTF-8");
+                    String errorMessage = e.getMessage() != null ? e.getMessage()
+                            : "Error connecting to Ollama API";
+                    JSONObject jsonError = new JSONObject();
+                    jsonError.put("error", errorMessage);
+                    response.getWriter().write(jsonError.toString());
                 }
 
             } catch (Exception e) {

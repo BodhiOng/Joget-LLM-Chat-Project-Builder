@@ -579,62 +579,7 @@
                                         return;
                                     }
 
-                                    // Check if streaming is enabled
-                                    const useStreaming = ${ param.useStreaming || false
-                                };
-
-                                if (useStreaming) {
-                                    // Set up server-sent events for streaming with a properly formatted URL
-                                    const streamUrl = '/jw/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service' +
-                                        '?action=streamMessage&message=' + encodeURIComponent(message) +
-                                        '&appId=${appId}&appVersion=${appVersion}';
-
-                                    console.log('Stream URL:', streamUrl);
-                                    const eventSource = new EventSource(streamUrl);
-
-                                    let fullResponse = '';
-
-                                    // Handle incoming message chunks with simplified parsing
-                                    eventSource.onmessage = function (event) {
-                                        console.log('Stream event received:', event.data);
-
-                                        try {
-                                            // Try to parse as JSON
-                                            const data = JSON.parse(event.data);
-
-                                            // Handle chunk data
-                                            if (data.chunk) {
-                                                fullResponse += data.chunk;
-                                                // Replace loading animation with formatted text
-                                                responseDiv.empty().html(formatLLMResponse(fullResponse));
-                                                chatMessages.scrollTop(chatMessages[0].scrollHeight);
-                                            }
-
-                                            // Check if this is the final message
-                                            if (data.done) {
-                                                eventSource.close();
-                                                sendButton.prop('disabled', false);
-                                            }
-                                        } catch (e) {
-                                            // If parsing fails, just append the raw data
-                                            console.error('Error parsing streaming response:', e);
-                                            fullResponse += event.data;
-                                            responseDiv.text(fullResponse);
-                                            chatMessages.scrollTop(chatMessages[0].scrollHeight);
-                                        }
-                                    };
-
-                                    // Handle errors
-                                    eventSource.onerror = function () {
-                                        eventSource.close();
-                                        if (fullResponse === '') {
-                                            responseDiv.text('Error: Failed to get response from Ollama');
-                                        }
-                                        errorMessage.text('Error connecting to Ollama streaming API').show();
-                                        sendButton.prop('disabled', false);
-                                    };
-                                } else {
-                                    // Use regular AJAX for non-streaming responses with explicit text dataType
+                                    // Use AJAX for responses with explicit text dataType
                                     $.ajax({
                                         url: serviceUrl,
                                         type: 'POST',
@@ -864,7 +809,7 @@
                                     });
                                 }
                             }
-            }
+                        }
 
                         // Send message when button is clicked
                         sendButton.click(sendMessage);
@@ -938,4 +883,5 @@
         });
                     </script>
                 </body>
+
                 </html>

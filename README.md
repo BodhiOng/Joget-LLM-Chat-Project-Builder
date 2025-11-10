@@ -5,11 +5,10 @@ This plugin provides a custom UI page component for Joget that allows users to c
 ## Features
 
 - Clean, modern chat interface integrated within Joget
-- Support for Ollama API (Llama2, Mistral, etc.)
-- Streaming responses for a more interactive experience
+- Support for Ollama API
 - Customizable system prompts
-- Adjustable parameters (temperature, max tokens)
-- Custom CSS support for UI customization
+- Code extraction and zip file creation from LLM responses
+- Support for multiple LLM providers through extensible client classes
 
 ## Installation
 
@@ -33,12 +32,9 @@ This plugin provides a custom UI page component for Joget that allows users to c
    - **Menu Label**: The label for the menu item
    - **ID**: A unique identifier for the menu
    - **Ollama API Endpoint**: The API endpoint for your Ollama instance (default: http://localhost:11434/api/generate)
-   - **Ollama Model**: The model to use (e.g., "llama2", "mistral", etc.)
+   - **Ollama Model**: The model to use
    - **Temperature**: Controls randomness (0.0 to 1.0)
-   - **Max Tokens**: Maximum number of tokens to generate
    - **System Prompt**: Initial instructions for the LLM
-   - **Use Streaming**: Enable to get streaming responses for a more interactive experience
-   - **Custom CSS**: Optional CSS to customize the appearance
 
 ### Ollama Setup
 
@@ -50,15 +46,9 @@ This plugin provides a custom UI page component for Joget that allows users to c
    ```
 3. Ensure Ollama is running and accessible from your Joget server (default port: 11434)
 
-### Security Considerations
-
-- API keys are stored in the Joget database and should be properly secured
-- Consider implementing additional security measures for sensitive applications
-- Review your LLM provider's terms of service and data handling policies
-
 ## Customization
 
-The plugin is designed to work with Ollama, but can be extended to support additional LLM providers by creating new client classes similar to `OllamaApiClient.java`. The implementation supports both regular and streaming responses for an interactive chat experience.
+The plugin is designed to work with Ollama, but can be extended to support additional LLM providers by creating new client classes similar to `OllamaApiClient.java`. The implementation includes robust code extraction and zip file creation capabilities.
 
 ## License
 

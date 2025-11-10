@@ -152,6 +152,10 @@ public class ZipFileUtil {
                                 .replace("&quot;", "\"")
                                 .replace("&#39;", "'");
 
+                        // Remove File X: and Code: header lines
+                        codeContent = codeContent.replace("^File\\s+\\d+:\\s+[^\n]+\\n", "");
+                        codeContent = codeContent.replace("^Code:\\s*\\n", "");
+
                         // Add the file to our map
                         codeFiles.put(currentFileName, codeContent);
                         foundCodeBlock = true;

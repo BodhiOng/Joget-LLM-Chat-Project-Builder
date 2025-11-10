@@ -334,7 +334,14 @@ public class ZipFileUtil {
 
             // Iterate through all keys in this object
             for (String key : json.keySet()) {
-                String newPath = currentPath.isEmpty() ? key : currentPath + "/" + key;
+                // Skip if the key is the same as the last path segment
+                String newPath;
+                if (currentPath.endsWith("/" + key) || currentPath.equals(key)) {
+                    newPath = currentPath;  // Avoid duplicating directory names
+                } else {
+                    newPath = currentPath.isEmpty() ? key : currentPath + "/" + key;
+                }
+                
                 Object value = json.get(key);
 
                 if (value instanceof JSONObject) {

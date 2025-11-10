@@ -57,7 +57,11 @@ public class OllamaApiClient {
 
         // Enhance system prompt to request project structure in JSON format for code-related prompts
         String enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
-                "When answering ANY coding-related questions, you MUST include a hierarchical project structure in JSON format. " +
+                "When answering ANY coding-related questions, you MUST:\n" +
+                "1. Include a hierarchical project structure in JSON format at the end of your response\n" +
+                "2. For each code block:\n" +
+                "   a. First, write the file number and filename (without the directory) in the format \"File [num]: [filename]\" on a separate line.\n" +
+                "   b. Then, on the next line, write \"Code: \" followed by the code block.\n" +
                 "Always add a directory structure at the end of your response with this exact format:\n" +
                 "```json\n{\n  \"hello-world-plugin\": {\n    \"pom.xml\": null,\n    \"src\": {\n      \"main\": {\n        \"java\": {\n          \"com\": {\n            \"example\": {\n              \"joget\": {\n                \"plugin\": {\n                  \"HelloWorldElement.java\": null\n                }\n              }\n            }\n          }\n        },\n        \"resources\": {\n          \"plugin.properties\": null\n        }\n      }\n    }\n  }\n}\n```\n" +
                 "This hierarchical structure should represent the complete project directory layout with all files. " +
@@ -197,7 +201,11 @@ public class OllamaApiClient {
 
         // Enhance system prompt to request project structure in JSON format for code-related prompts
         String enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT INSTRUCTION FOR CODE RESPONSES:\n" +
-                "When answering ANY coding-related questions, you MUST include a hierarchical project structure in JSON format. " +
+                "When answering ANY coding-related questions, you MUST:\n" +
+                "1. Include a hierarchical project structure in JSON format at the end of your response\n" +
+                "2. For each code block:\n" +
+                "   a. First, write the file number and filename (without the directory) in the format \"File [num]: [filename]\" on a separate line.\n" +
+                "   b. Then, on the next line, write \"Code: \" followed by the code block.\n" +
                 "Always add a directory structure at the end of your response with this exact format:\n" +
                 "```json\n{\n  \"hello-world-plugin\": {\n    \"pom.xml\": null,\n    \"src\": {\n      \"main\": {\n        \"java\": {\n          \"com\": {\n            \"example\": {\n              \"joget\": {\n                \"plugin\": {\n                  \"HelloWorldElement.java\": null\n                }\n              }\n            }\n          }\n        },\n        \"resources\": {\n          \"plugin.properties\": null\n        }\n      }\n    }\n  }\n}\n```\n" +
                 "This hierarchical structure should represent the complete project directory layout with all files. " +

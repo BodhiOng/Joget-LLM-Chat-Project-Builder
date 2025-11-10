@@ -78,13 +78,12 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
         StringBuilder html = new StringBuilder();
         html.append("<div class=\"llm-chat-container\" style=\"max-width: 1400px; margin: 0 auto; padding: 20px;\">\n");
         html.append("    <h2><i class=\"fas fa-comments\"></i> LLM Chat</h2>\n");
-        // Top buttons removed as per request
-
         html.append(
                 "    <div id=\"chatMessages\" style=\"height: 500px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 15px; background-color: #f9f9f9;\">\n");
         html.append(
                 "        <div class=\"message bot-message\"\n");
-        html.append("            style=\"background-color: #ffffff; margin-right: auto; margin-left: 10px; border: 1px solid #e0e0e0;\">\n");
+        html.append(
+                "            style=\"background-color: #ffffff; margin-right: auto; margin-left: 10px; border: 1px solid #e0e0e0;\">\n");
         html.append("            Hello! How can I assist you today?\n");
         html.append("        </div>\n");
         html.append("    </div>\n");
@@ -264,15 +263,16 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
         html.append("            messageDiv.html(formatLLMResponse(message));\n");
         html.append("            \n");
         html.append("            // Add download button if the message contains code\n");
-        html.append("            if (message.includes('```') || message.includes('<pre>') || message.includes('<code>')) {\n");
+        html.append(
+                "            if (message.includes('```') || message.includes('<pre>') || message.includes('<code>')) {\n");
         html.append("                const divider = $('<div>').addClass('download-divider');\n");
         html.append("                messageDiv.append(divider);\n");
         html.append("                \n");
         html.append("                const downloadBtn = $('<button>').addClass('response-download-btn')\n");
         html.append("                    .html('<i class=\"fas fa-download\"></i> Download Code')\n");
         html.append("                    .attr('title', 'Download code from this response');\n");
-        html.append("                messageDiv.append(downloadBtn);\n");     
-        html.append("                \n");   
+        html.append("                messageDiv.append(downloadBtn);\n");
+        html.append("                \n");
         html.append("                // Add click handler for the download button\n");
         html.append("                downloadBtn.on('click', function() {\n");
         html.append("                    // Disable the button during download\n");
@@ -387,7 +387,6 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
         html.append("        \n");
         html.append("        // Send message to server\n");
         html.append("        $.ajax({\n");
-        // Use the correct web service URL with explicit plugin class name
         html.append("            url: '/jw/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service',\n");
         html.append("            type: 'POST',\n");
         html.append("            data: {\n");
@@ -920,13 +919,7 @@ public class LlmChatUserviewMenu extends UserviewMenu implements PluginWebSuppor
                                 writer.flush();
                             }
                         };
-
-                        // Set up server-sent events for streaming with a properly formatted URL
-                        String streamUrl = request.getContextPath()
-                                + "/web/json/plugin/org.joget.marketplace.LlmChatUserviewMenu/service?action=streamMessage&message="
-                                + java.net.URLEncoder.encode(message, "UTF-8") + "&appId="
-                                + request.getParameter("appId") + "&appVersion=" + request.getParameter("appVersion");
-
+                        
                         // Call Ollama API with streaming
                         OllamaApiClient.callOllamaApiStreaming(
                                 message,
